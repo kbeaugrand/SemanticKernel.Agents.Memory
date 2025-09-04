@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 using SemanticKernel.Agents.Memory.Core;
 using SemanticKernel.Agents.Memory.Core.Handlers;
 
@@ -21,14 +22,20 @@ public static class PipelineDemo
     /// <summary>
     /// Runs a complete pipeline demo with sample files.
     /// </summary>
+    /// <param name="serviceProvider">Service provider for dependency injection.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A tuple containing the document ID and pipeline logs.</returns>
-    public static async Task<(string DocumentId, IReadOnlyList<PipelineLogEntry> Logs)> RunAsync(CancellationToken ct = default)
+    public static async Task<(string DocumentId, IReadOnlyList<PipelineLogEntry> Logs)> RunAsync(
+        IServiceProvider serviceProvider, 
+        CancellationToken ct = default)
     {
         var orchestrator = new ImportOrchestrator();
-        orchestrator.AddHandler(new TextExtractionHandler());
         
-        // Add text chunking with custom options
+        // Get handlers from DI container
+        var textExtractionHandler = serviceProvider.GetRequiredService<TextExtractionHandler>();
+        orchestrator.AddHandler(textExtractionHandler);
+        
+        // Add other handlers (these don't require DI yet)
         var chunkingOptions = new TextChunkingOptions
         {
             MaxChunkSize = 500,
@@ -39,18 +46,40 @@ public static class PipelineDemo
         orchestrator.AddHandler(new GenerateEmbeddingsHandler());
         orchestrator.AddHandler(new SaveRecordsHandler());
 
+        // Create sample files to test different formats
         var request = new DocumentUploadRequest
         {
             Files =
             {
-                new UploadedFile{ FileName = "hello.txt", Bytes = Encoding.UTF8.GetBytes("hello world") },
-                new UploadedFile{ FileName = "lorem.txt", Bytes = Encoding.UTF8.GetBytes("lorem ipsum") }
+                new UploadedFile{ 
+                    FileName = "hello.txt", 
+                    Bytes = Encoding.UTF8.GetBytes("# Hello World\n\nThis is a simple text file for testing."),
+                    MimeType = "text/plain"
+                },
+                new UploadedFile{ 
+                    FileName = "document.md", 
+                    Bytes = Encoding.UTF8.GetBytes("# Lorem Ipsum\n\n**Lorem ipsum** dolor sit amet, *consectetur* adipiscing elit.\n\n## Section 2\n\nSed do eiusmod tempor incididunt ut labore."),
+                    MimeType = "text/markdown"
+                }
             }
         };
 
         var pipeline = orchestrator.PrepareNewDocumentUpload(index: "docs", request, context: new NoopContext());
         await orchestrator.RunPipelineAsync(pipeline, ct);
         return (pipeline.DocumentId, pipeline.Logs);
+    }
+
+    /// <summary>
+    /// Runs the pipeline demo with a basic fallback (no DI).
+    /// </summary>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>A tuple containing the document ID and pipeline logs.</returns>
+    public static Task<(string DocumentId, IReadOnlyList<PipelineLogEntry> Logs)> RunAsync(CancellationToken ct = default)
+    {
+        // This method is kept for backward compatibility but will use basic text extraction
+        throw new InvalidOperationException(
+            "Please use RunAsync(IServiceProvider serviceProvider) to properly configure MarkitDown text extraction. " +
+            "Basic text extraction without DI is no longer supported.");
     }
 
     /// <summary>
