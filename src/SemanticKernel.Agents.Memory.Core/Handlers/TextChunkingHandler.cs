@@ -54,9 +54,20 @@ public sealed class TextChunkingHandler : IPipelineStepHandler
         {
             ct.ThrowIfCancellationRequested();
 
-            // For simulation purposes, we'll generate sample text content
-            // In a real implementation, you would read the actual extracted text
-            var extractedText = GenerateSampleText(file.Name);
+            // Get the actual extracted text from the context
+            var extractedTextKey = $"extracted_text_{file.Id}";
+            string extractedText;
+            
+            if (pipeline.ContextArguments.TryGetValue(extractedTextKey, out var textValue) && textValue is string text)
+            {
+                extractedText = text;
+            }
+            else
+            {
+                // Fallback to generating sample text if no extracted text is available
+                extractedText = GenerateSampleText(file.Name);
+            }
+            
             var chunks = ChunkText(extractedText);
 
             // Create chunked files
