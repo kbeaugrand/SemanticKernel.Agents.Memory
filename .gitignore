@@ -1,0 +1,52 @@
+# .NET Core
+bin/
+obj/
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+# Build results
+[Dd]ebug*/
+[Rr]elease*/
+build/
+# NuGet Packages
+*.nupkg
+# Visual Studio Code
+.vscode/
+# Rider
+.idea/
+*.sln.iml
+# DotCover
+*.dotCover
+# Logs
+*.log
+# Test Results
+TestResults/
+# Others
+*.vspscc
+*.vssscc
+.vs/
+# Resharper
+_ReSharper*/
+*.[Rr]e[Ss]harper
+# StyleCop
+StyleCopReport.xml
+# Backup & crash reports
+*.bak
+*.swp
+*.tmp
+# OS generated files
+[Tt]humbs.db
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.DS_Store
+# JetBrains Rider
+.idea/
+*.sln.iml
+# ASP.NET Scaffolding
+ScaffoldingReadMe.txt
+# Dotnet CLI
+project.lock.json
+project.fragment.lock.json
+artifacts/
