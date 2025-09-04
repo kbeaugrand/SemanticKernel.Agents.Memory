@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\SemanticKernel.Agents.Memory.Core\SemanticKernel.Agents.Memory.Core.csproj" />
+    <ProjectReference Include="..\..\src\SemanticKernel.Agents.Memory.Abstractions\SemanticKernel.Agents.Memory.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SemanticKernel.Core" Version="1.64.0" />
+  </ItemGroup>
+
+</Project>

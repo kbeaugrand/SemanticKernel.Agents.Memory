@@ -1,0 +1,23 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <PackageId>SemanticKernel.Agents.Memory.Core</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>Kevin Beaugrand</Authors>
+    <Company>Kevin Beaugrand</Company>
+    <Description>Core logic for SemanticKernel Agents Memory.</Description>
+    <PackageTags>semantic-kernel;agents;memory;core</PackageTags>
+    <RepositoryUrl>https://github.com/kbeaugrand/SemanticKernel.Agents.Memory</RepositoryUrl>
+
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SemanticKernel.Core" Version="1.64.0" />
+  </ItemGroup>
+
+</Project>

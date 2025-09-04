@@ -1,0 +1,23 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>SemanticKernel.Agents.Memory</RootNamespace>
+
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <PackageId>SemanticKernel.Agents.Memory.Abstractions</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>Kevin Beaugrand</Authors>
+    <Company>Kevin Beaugrand</Company>
+    <Description>Abstractions for SemanticKernel Agents Memory.</Description>
+    <PackageTags>semantic-kernel;agents;memory;abstractions</PackageTags>
+    <RepositoryUrl>https://github.com/kbeaugrand/SemanticKernel.Agents.Memory</RepositoryUrl>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SemanticKernel.Abstractions" Version="1.64.0" />
+  </ItemGroup>
+
+</Project>
