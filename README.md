@@ -11,6 +11,8 @@ This repository contains an advanced **Memory Pipeline** designed to enhance the
 
 - **Advanced Text Chunking**: Supports both simple size-based chunking and intelligent semantic chunking based on document structure
 - **Semantic Chunking**: Creates meaningful chunks by detecting document headings and structure (Markdown, underlined, numbered headings)
+- **Dependency Injection**: Full integration with Microsoft.Extensions.DependencyInjection for easy configuration and testing
+- **Fluent Configuration API**: Intuitive configuration syntax with `services.ConfigureMemoryIngestion(options => {...})`
 - Modular memory components supporting vector stores, databases, and custom memory handlers  
 - Efficient embedding and semantic search integration for context-aware retrieval  
 - Support for both short-term conversation memory and long-term knowledge persistence  
@@ -28,6 +30,51 @@ This repository contains an advanced **Memory Pipeline** designed to enhance the
 
 ## Getting Started
 
+### New Dependency Injection Configuration (Recommended)
+
+Configure the memory ingestion pipeline using the fluent API:
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using SemanticKernel.Agents.Memory.Core.Extensions;
+using SemanticKernel.Agents.Memory.Core.Handlers;
+
+var services = new ServiceCollection();
+services.AddLogging();
+
+// Configure memory ingestion pipeline
+services.ConfigureMemoryIngestion(options =>
+{
+    options
+        .WithMarkitDownTextExtraction("http://localhost:5000")
+        .WithTextExtraction<TextExtractionHandler>()
+        .WithSimpleTextChunking(() => new TextChunkingOptions
+        {
+            MaxChunkSize = 500,
+            TextOverlap = 50
+        })
+        .WithEmbeddingsGeneration<GenerateEmbeddingsHandler>()
+        .WithSaveRecords<SaveRecordsHandler>();
+});
+
+var serviceProvider = services.BuildServiceProvider();
+var orchestrator = serviceProvider.GetRequiredService<ServiceImportOrchestrator>();
+```
+
+### Alternative: Semantic Chunking Configuration
+
+```csharp
+services.ConfigureMemoryIngestion(options =>
+{
+    options
+        .WithMarkitDownTextExtraction()
+        .WithTextExtraction<TextExtractionHandler>()
+        .WithSemanticChunking()  // Uses document structure for intelligent chunking
+        .WithEmbeddingsGeneration<GenerateEmbeddingsHandler>()
+        .WithSaveRecords<SaveRecordsHandler>();
+});
+```
+
 ### Running the Sample
 
 To see the memory pipeline in action, run the sample application:
@@ -37,11 +84,14 @@ cd samples/SemanticKernel.Agents.Memory.Samples
 dotnet run
 ```
 
-The sample application provides three demo options:
+The sample application provides six demo options:
 
 1. **Basic Pipeline Demo** - Original implementation with simple text chunking
-2. **Semantic Chunking Demo** - Advanced chunking based on document structure
+2. **Semantic Chunking Demo** - Advanced chunking based on document structure  
 3. **Chunking Strategy Comparison** - Side-by-side comparison of different chunking approaches
+4. **New DI-based Pipeline Demo** - Demonstrates the new dependency injection configuration
+5. **DI-based Semantic Chunking Demo** - Shows semantic chunking with DI configuration
+6. **DI-based Custom Configuration Demo** - Advanced configuration options with DI
 
 #### Semantic Chunking Features
 
@@ -61,6 +111,10 @@ var semanticOptions = new SemanticChunkingOptions
 };
 orchestrator.AddHandler(new SemanticChunking(semanticOptions));
 ```
+
+## Configuration
+
+For detailed configuration options and advanced scenarios, see [CONFIGURATION.md](CONFIGURATION.md).
 
 ### Using in Your Project
 

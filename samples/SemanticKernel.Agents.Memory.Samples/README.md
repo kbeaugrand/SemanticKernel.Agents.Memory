@@ -7,8 +7,8 @@ This project contains sample implementations and demonstrations for the Semantic
 ### PipelineDemo.cs
 Contains utility methods for creating and running pipeline demonstrations:
 - `RunAsync()` - Runs a complete pipeline demo with sample files
-- `CreateTestContext()` - Creates a test import context
-- `CreateSampleDocument()` - Creates sample documents for testing
+- `RunSemanticChunkingAsync()` - Demonstrates semantic chunking configuration
+- `RunCustomHandlerAsync()` - Shows advanced configuration options
 
 ### Pipeline Handlers
 The sample demonstrates the use of pipeline handlers from the Core package:
@@ -19,7 +19,10 @@ The sample demonstrates the use of pipeline handlers from the Core package:
 These handlers are now part of the `SemanticKernel.Agents.Memory.Core` package and can be used in production scenarios.
 
 ### Program.cs
-A console application that demonstrates running the pipeline with sample data.
+A console application that demonstrates running the pipeline with sample data. The program offers multiple demo options:
+1. **Basic Pipeline Demo** - Shows standard text processing pipeline
+2. **Semantic Chunking Demo** - Demonstrates semantic-based text chunking
+3. **Custom Configuration Demo** - Shows advanced configuration options
 
 ## Running the sample
 

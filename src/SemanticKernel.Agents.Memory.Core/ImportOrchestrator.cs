@@ -1,41 +1,52 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace SemanticKernel.Agents.Memory.Core;
 
 /// <summary>
-/// In-process pipeline orchestrator for document import.
+/// Production pipeline orchestrator for document import with dependency injection support.
 /// </summary>
 public sealed class ImportOrchestrator : BaseOrchestrator
 {
-    private readonly ConcurrentDictionary<string, IPipelineStepHandler> _handlers = new(StringComparer.OrdinalIgnoreCase);
+    private readonly IServiceProvider _serviceProvider;
+    private readonly MemoryIngestionOptions _options;
     private bool _disposed;
 
-    public ImportOrchestrator(ILogger<ImportOrchestrator>? logger = null) : base(logger)
+    /// <summary>
+    /// Initializes a new instance of the ImportOrchestrator
+    /// </summary>
+    /// <param name="serviceProvider">Service provider for resolving handlers</param>
+    /// <param name="options">Memory ingestion configuration options</param>
+    /// <param name="logger">Logger instance</param>
+    public ImportOrchestrator(
+        IServiceProvider serviceProvider,
+        MemoryIngestionOptions options,
+        ILogger<ImportOrchestrator>? logger = null) : base(logger)
     {
+        _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+        _options = options ?? throw new ArgumentNullException(nameof(options));
     }
 
-    public override IReadOnlyList<string> HandlerNames => _handlers.Keys.OrderBy(k => k).ToArray();
+    public override IReadOnlyList<string> HandlerNames => _options.Handlers.Select(h => h.StepName).ToArray();
 
     public override Task AddHandlerAsync(IPipelineStepHandler handler, CancellationToken ct = default)
     {
-        _handlers[handler.StepName] = handler;
-        return Task.CompletedTask;
+        throw new NotSupportedException(
+            "ImportOrchestrator uses dependency injection for handler registration. " +
+            "Configure handlers using MemoryIngestionOptions during service registration.");
     }
 
     public override Task<bool> TryAddHandlerAsync(IPipelineStepHandler handler, CancellationToken ct = default)
     {
-        var added = _handlers.TryAdd(handler.StepName, handler);
-        return Task.FromResult(added);
+        throw new NotSupportedException(
+            "ImportOrchestrator uses dependency injection for handler registration. " +
+            "Configure handlers using MemoryIngestionOptions during service registration.");
     }
-
-    public void AddHandler<T>(T handler) where T : IPipelineStepHandler => _handlers[handler.StepName] = handler;
-    public void AddHandler(IPipelineStepHandler handler) => _handlers[handler.StepName] = handler;
 
     public override async Task RunPipelineAsync(DataPipelineResult pipeline, CancellationToken ct = default)
     {
@@ -45,7 +56,6 @@ public sealed class ImportOrchestrator : BaseOrchestrator
         _logger?.LogInformation("Starting pipeline execution for document {DocumentId} with {StepCount} steps: [{Steps}]", 
             pipeline.DocumentId, pipeline.RemainingSteps.Count, string.Join(", ", pipeline.RemainingSteps));
 
-        // Simple in-memory execution: iterate through RemainingSteps and invoke handlers.
         var maxRetriesPerStep = 2;
         var totalSteps = pipeline.RemainingSteps.Count;
         var completedSteps = 0;
@@ -59,11 +69,28 @@ public sealed class ImportOrchestrator : BaseOrchestrator
             _logger?.LogDebug("Executing pipeline step {CurrentStep}/{TotalSteps}: '{StepName}' for document {DocumentId}", 
                 completedSteps, totalSteps, stepName, pipeline.DocumentId);
 
-            if (!_handlers.TryGetValue(stepName, out var handler))
+            // Find handler registration for this step
+            var handlerRegistration = _options.Handlers.FirstOrDefault(h => 
+                string.Equals(h.StepName, stepName, StringComparison.OrdinalIgnoreCase));
+
+            if (handlerRegistration == null)
             {
                 var errorMessage = $"No handler registered for step '{stepName}'. Registered: {string.Join(", ", HandlerNames)}";
                 _logger?.LogError("Pipeline execution failed: {ErrorMessage}", errorMessage);
                 throw new InvalidOperationException(errorMessage);
+            }
+
+            // Resolve handler from DI container
+            IPipelineStepHandler handler;
+            try
+            {
+                handler = (IPipelineStepHandler)_serviceProvider.GetRequiredService(handlerRegistration.HandlerType);
+            }
+            catch (Exception ex)
+            {
+                var errorMessage = $"Failed to resolve handler '{handlerRegistration.HandlerType.Name}' for step '{stepName}' from DI container: {ex.Message}";
+                _logger?.LogError(ex, "Handler resolution failed: {ErrorMessage}", errorMessage);
+                throw new InvalidOperationException(errorMessage, ex);
             }
 
             var stepStartTime = DateTimeOffset.UtcNow;
