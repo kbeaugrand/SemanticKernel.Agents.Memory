@@ -81,4 +81,54 @@ public static class ServiceCollectionExtensions
 
         return services;
     }
+
+    /// <summary>
+    /// Configures memory ingestion pipeline with fluent configuration
+    /// </summary>
+    /// <param name="services">Service collection</param>
+    /// <param name="configure">Configuration action for memory ingestion options</param>
+    /// <returns>Service collection for chaining</returns>
+    public static IServiceCollection ConfigureMemoryIngestion(
+        this IServiceCollection services,
+        Action<MemoryIngestionOptions> configure)
+    {
+        if (configure == null)
+            throw new ArgumentNullException(nameof(configure));
+
+        var options = new MemoryIngestionOptions();
+        configure(options);
+
+        // Register the options instance
+        services.AddSingleton(options);
+
+        // Apply custom service registrations
+        foreach (var serviceRegistration in options.ServiceRegistrations)
+        {
+            serviceRegistration(services);
+        }
+
+        // Register all handlers from options
+        foreach (var handlerRegistration in options.Handlers)
+        {
+            var serviceDescriptor = new ServiceDescriptor(
+                handlerRegistration.HandlerType,
+                handlerRegistration.HandlerType,
+                handlerRegistration.Lifetime);
+            services.Add(serviceDescriptor);
+
+            // Also register as IPipelineStepHandler interface
+            var interfaceDescriptor = new ServiceDescriptor(
+                typeof(IPipelineStepHandler),
+                provider => provider.GetRequiredService(handlerRegistration.HandlerType),
+                handlerRegistration.Lifetime);
+            services.Add(interfaceDescriptor);
+        }
+
+        // Register the ImportOrchestrator
+        services.AddScoped<ImportOrchestrator>();
+        services.AddScoped<IPipelineOrchestrator>(provider => 
+            provider.GetRequiredService<ImportOrchestrator>());
+
+        return services;
+    }
 }

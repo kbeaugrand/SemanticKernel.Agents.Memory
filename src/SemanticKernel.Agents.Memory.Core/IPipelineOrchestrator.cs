@@ -11,18 +11,17 @@ namespace SemanticKernel.Agents.Memory.Core;
 /// </summary>
 public interface IPipelineOrchestrator
 {
-    IReadOnlyList<string> HandlerNames { get; }
-    Task AddHandlerAsync(IPipelineStepHandler handler, CancellationToken ct = default);
-    Task<bool> TryAddHandlerAsync(IPipelineStepHandler handler, CancellationToken ct = default);
     Task<string> ImportDocumentAsync(
         string index,
         DocumentUploadRequest upload,
         IContext context,
         CancellationToken ct = default);
+
     DataPipelineResult PrepareNewDocumentUpload(
         string index,
         DocumentUploadRequest upload,
         IContext context);
+        
     Task RunPipelineAsync(DataPipelineResult pipeline, CancellationToken ct = default);
 }
 
