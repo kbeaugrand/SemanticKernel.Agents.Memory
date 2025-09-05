@@ -115,6 +115,10 @@ public sealed class SimpleTextChunking : IPipelineStepHandler
                     ContentSHA256 = ComputeSHA256(Encoding.UTF8.GetBytes(chunks[i]))
                 };
 
+                // Store chunk text content in context for embedding generation
+                var chunkTextKey = $"chunk_text_{chunkFile.Id}";
+                pipeline.ContextArguments[chunkTextKey] = chunks[i];
+
                 newFiles.Add(chunkFile);
             }
         }

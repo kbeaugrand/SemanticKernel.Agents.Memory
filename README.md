@@ -68,7 +68,6 @@ services.ConfigureMemoryIngestion(options =>
 {
     options
         .WithMarkitDownTextExtraction()
-        .WithTextExtraction<TextExtractionHandler>()
         .WithSemanticChunking()  // Uses document structure for intelligent chunking
         .WithEmbeddingsGeneration<GenerateEmbeddingsHandler>()
         .WithSaveRecords<SaveRecordsHandler>();

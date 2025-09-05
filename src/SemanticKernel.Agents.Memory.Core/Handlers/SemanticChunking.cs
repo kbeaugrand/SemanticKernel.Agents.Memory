@@ -136,6 +136,10 @@ public sealed class SemanticChunking : IPipelineStepHandler
                     TitleHierarchy = chunks[i].TitleHierarchy
                 };
 
+                // Store chunk text content in context for embedding generation
+                var chunkTextKey = $"chunk_text_{chunkFile.Id}";
+                pipeline.ContextArguments[chunkTextKey] = chunks[i].Content;
+
                 newFiles.Add(chunkFile);
             }
         }
