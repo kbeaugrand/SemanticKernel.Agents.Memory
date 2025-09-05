@@ -17,6 +17,7 @@ using SemanticKernel.Agents.Memory.Core.Extensions;
 using SemanticKernel.Agents.Memory.Core.Handlers;
 using SemanticKernel.Agents.Memory.Samples.Configuration;
 using Microsoft.SemanticKernel.Connectors.InMemory;
+using Azure.Identity;
 
 namespace SemanticKernel.Agents.Memory.Samples;
 
@@ -68,12 +69,12 @@ public static class PipelineDemo
         {
             options
                 .WithMarkitDownTextExtraction(markitDownConfig.ServiceUrl)
-                .WithSimpleTextChunking(() => new SemanticKernel.Agents.Memory.Core.Handlers.TextChunkingOptions
+                .WithSimpleTextChunking(() => new TextChunkingOptions
                 {
                     MaxChunkSize = chunkingConfig.Simple.MaxChunkSize,
                     TextOverlap = chunkingConfig.Simple.TextOverlap
                 })
-                .WithEmbeddingsGeneration<GenerateEmbeddingsHandler>()
+                .WithDefaultEmbeddingsGeneration()
                 .WithSaveRecords(new InMemoryVectorStore());
         });
 
@@ -343,11 +344,11 @@ Final thoughts and summary of the document content."),
             try
             {
                 // Create Azure OpenAI client
-                var azureOpenAIClient = new AzureOpenAIClient(new Uri(azureOpenAIOptions.Endpoint), new AzureKeyCredential(azureOpenAIOptions.ApiKey));
-                
-                // Get embedding client and wrap it
-                var embeddingClient = azureOpenAIClient.GetEmbeddingClient(azureOpenAIOptions.EmbeddingModel);
-                var embeddingGenerator = new AzureOpenAIEmbeddingGenerator(embeddingClient, azureOpenAIOptions.EmbeddingModel, logger);
+                var azureOpenAIClient = new AzureOpenAIClient(new Uri(azureOpenAIOptions.Endpoint), new DefaultAzureCredential());
+
+                // Get embedding generator
+                var embeddingGenerator = azureOpenAIClient.GetEmbeddingClient(azureOpenAIOptions.EmbeddingModel)
+                                                            .AsIEmbeddingGenerator();
 
                 logger?.LogInformation("Azure OpenAI embedding generator configured successfully with model: {ModelName}", azureOpenAIOptions.EmbeddingModel);
                 
