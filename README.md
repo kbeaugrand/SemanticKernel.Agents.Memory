@@ -52,8 +52,25 @@ services.ConfigureMemoryIngestion(options =>
 });
 
 var serviceProvider = services.BuildServiceProvider();
-// the demo resolves ImportOrchestrator from the provider
+
+ // Get the orchestrator from the service provider
 var orchestrator = serviceProvider.GetRequiredService<ImportOrchestrator>();
+
+// Create a file upload request with a large text file
+var request = new DocumentUploadRequest
+{
+    Files =
+    {
+        new UploadedFile{ 
+            FileName = "large-document.pdf", 
+            Bytes = file.GetBytes(),
+            MimeType = "application/pdf"
+        }
+    }
+};
+
+var pipeline = orchestrator.PrepareNewDocumentUpload(index: "default", request);
+await orchestrator.RunPipelineAsync(pipeline, ct);
 ```
 
 ### Running the Sample
