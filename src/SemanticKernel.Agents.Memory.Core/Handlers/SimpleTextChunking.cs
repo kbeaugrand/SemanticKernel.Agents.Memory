@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace SemanticKernel.Agents.Memory.Core.Handlers;
 
@@ -39,20 +40,30 @@ public sealed class SimpleTextChunking : IPipelineStepHandler
     public string StepName => Name;
 
     private readonly TextChunkingOptions _options;
+    private readonly ILogger<SimpleTextChunking>? _logger;
 
-    public SimpleTextChunking(TextChunkingOptions? options = null)
+    public SimpleTextChunking(TextChunkingOptions? options = null, ILogger<SimpleTextChunking>? logger = null)
     {
         _options = options ?? new TextChunkingOptions();
+        _logger = logger;
     }
 
     public async Task<(ReturnType Result, DataPipelineResult Pipeline)> InvokeAsync(DataPipelineResult pipeline, CancellationToken ct = default)
     {
+        var eligibleFiles = pipeline.Files.Where(f => f.ArtifactType == ArtifactTypes.ExtractedText).ToList();
+        
+        _logger?.LogDebug("Starting simple text chunking for {FileCount} files with options: MaxChunkSize={MaxChunkSize}, TextOverlap={TextOverlap}", 
+            eligibleFiles.Count, _options.MaxChunkSize, _options.TextOverlap);
+
         var newFiles = new List<FileDetails>();
+        var totalChunks = 0;
 
         // Process files with extracted text
-        foreach (var file in pipeline.Files.Where(f => f.ArtifactType == ArtifactTypes.ExtractedText))
+        foreach (var file in eligibleFiles)
         {
             ct.ThrowIfCancellationRequested();
+
+            _logger?.LogTrace("Processing file '{FileName}' (ID: {FileId}) for simple text chunking", file.Name, file.Id);
 
             // Get the actual extracted text from the context
             var extractedTextKey = $"extracted_text_{file.Id}";
@@ -61,14 +72,24 @@ public sealed class SimpleTextChunking : IPipelineStepHandler
             if (pipeline.ContextArguments.TryGetValue(extractedTextKey, out var textValue) && textValue is string text)
             {
                 extractedText = text;
+                _logger?.LogTrace("Retrieved extracted text for file '{FileName}': {CharacterCount} characters", 
+                    file.Name, extractedText.Length);
             }
             else
             {
                 // Fallback to generating sample text if no extracted text is available
                 extractedText = GenerateSampleText(file.Name);
+                _logger?.LogWarning("No extracted text found for file '{FileName}', using generated sample text", file.Name);
             }
             
+            _logger?.LogDebug("Chunking text for file '{FileName}' ({CharacterCount} characters)", 
+                file.Name, extractedText.Length);
+            
             var chunks = ChunkText(extractedText);
+            totalChunks += chunks.Count;
+
+            _logger?.LogInformation("Created {ChunkCount} simple chunks for file '{FileName}'", 
+                chunks.Count, file.Name);
 
             // Create chunked files
             for (int i = 0; i < chunks.Count; i++)
@@ -82,6 +103,9 @@ public sealed class SimpleTextChunking : IPipelineStepHandler
                     PartitionNumber = i,
                     SectionNumber = file.SectionNumber
                 };
+
+                _logger?.LogTrace("Created chunk {ChunkIndex}/{TotalChunks} for file '{FileName}': {ChunkSize} characters", 
+                    i + 1, chunks.Count, file.Name, chunks[i].Length);
 
                 // Add generated file reference
                 chunkFile.GeneratedFiles["chunk.txt"] = new GeneratedFileDetails
@@ -97,7 +121,12 @@ public sealed class SimpleTextChunking : IPipelineStepHandler
 
         // Add chunked files to pipeline
         pipeline.Files.AddRange(newFiles);
-        pipeline.Log(this, $"Created {newFiles.Count} text chunks from {pipeline.Files.Count(f => f.ArtifactType == ArtifactTypes.ExtractedText)} extracted text file(s).");
+        
+        var logMessage = $"Created {totalChunks} text chunks from {eligibleFiles.Count} extracted text file(s).";
+        pipeline.Log(this, logMessage);
+        
+        _logger?.LogInformation("Simple text chunking completed: {TotalChunks} chunks created from {SourceFileCount} files", 
+            totalChunks, eligibleFiles.Count);
         
         await Task.Yield();
         return (ReturnType.Success, pipeline);
@@ -111,7 +140,12 @@ public sealed class SimpleTextChunking : IPipelineStepHandler
     private List<string> ChunkText(string text)
     {
         if (string.IsNullOrWhiteSpace(text))
+        {
+            _logger?.LogTrace("Input text is null or whitespace, returning empty chunk list");
             return new List<string>();
+        }
+
+        _logger?.LogTrace("Starting simple text chunking for text of length {TextLength}", text.Length);
 
         var chunks = new List<string>();
         var currentPosition = 0;
@@ -121,12 +155,17 @@ public sealed class SimpleTextChunking : IPipelineStepHandler
             var chunkSize = Math.Min(_options.MaxChunkSize, text.Length - currentPosition);
             var endPosition = currentPosition + chunkSize;
 
+            _logger?.LogTrace("Processing chunk at position {CurrentPosition}, target end position {EndPosition} (chunk size {ChunkSize})", 
+                currentPosition, endPosition, chunkSize);
+
             // Try to find a natural break point near the end of the chunk
             if (endPosition < text.Length)
             {
                 var bestBreakPoint = FindBestBreakPoint(text, currentPosition, endPosition);
                 if (bestBreakPoint > currentPosition)
                 {
+                    _logger?.LogTrace("Found natural break point at position {BreakPoint} (moved from {OriginalEnd})", 
+                        bestBreakPoint, endPosition);
                     endPosition = bestBreakPoint;
                 }
             }
@@ -135,12 +174,18 @@ public sealed class SimpleTextChunking : IPipelineStepHandler
             if (!string.IsNullOrWhiteSpace(chunk))
             {
                 chunks.Add(chunk);
+                _logger?.LogTrace("Created chunk {ChunkIndex}: {ChunkLength} characters, position {StartPos}-{EndPos}", 
+                    chunks.Count, chunk.Length, currentPosition, endPosition);
             }
 
             // Move to next position with overlap
-            currentPosition = Math.Max(currentPosition + 1, endPosition - _options.TextOverlap);
+            var nextPosition = Math.Max(currentPosition + 1, endPosition - _options.TextOverlap);
+            _logger?.LogTrace("Moving to next position {NextPosition} (overlap: {Overlap})", 
+                nextPosition, _options.TextOverlap);
+            currentPosition = nextPosition;
         }
 
+        _logger?.LogTrace("Simple text chunking completed: {ChunkCount} chunks created", chunks.Count);
         return chunks;
     }
 
