@@ -9,6 +9,8 @@ This repository contains an advanced **Memory Pipeline** designed to enhance the
 
 ## Features
 
+- **Advanced Text Chunking**: Supports both simple size-based chunking and intelligent semantic chunking based on document structure
+- **Semantic Chunking**: Creates meaningful chunks by detecting document headings and structure (Markdown, underlined, numbered headings)
 - Modular memory components supporting vector stores, databases, and custom memory handlers  
 - Efficient embedding and semantic search integration for context-aware retrieval  
 - Support for both short-term conversation memory and long-term knowledge persistence  
@@ -35,7 +37,30 @@ cd samples/SemanticKernel.Agents.Memory.Samples
 dotnet run
 ```
 
-This will demonstrate a complete pipeline processing sample documents through text extraction, embedding generation, and storage steps.
+The sample application provides three demo options:
+
+1. **Basic Pipeline Demo** - Original implementation with simple text chunking
+2. **Semantic Chunking Demo** - Advanced chunking based on document structure
+3. **Chunking Strategy Comparison** - Side-by-side comparison of different chunking approaches
+
+#### Semantic Chunking Features
+
+The semantic chunking handler provides intelligent document processing:
+- **Structure-aware**: Detects headings and creates chunks based on document organization
+- **Configurable**: Adjust title level thresholds and chunk sizes
+- **Multiple formats**: Supports Markdown (`# ## ###`), underlined headings, and numbered sections
+- **Fallback handling**: Gracefully handles unstructured content with paragraph-based chunking
+
+Example configuration:
+```csharp
+var semanticOptions = new SemanticChunkingOptions
+{
+    TitleLevelThreshold = 2,  // Split on H2 and above
+    MaxChunkSize = 1500,      // Maximum characters per chunk
+    MinChunkSize = 100        // Minimum characters per chunk
+};
+orchestrator.AddHandler(new SemanticChunking(semanticOptions));
+```
 
 ### Using in Your Project
 
@@ -49,6 +74,23 @@ This will demonstrate a complete pipeline processing sample documents through te
    ```csharp
    var orchestrator = new ImportOrchestrator();
    orchestrator.AddHandler(new TextExtractionHandler());
+   
+   // Choose your chunking strategy:
+   // Simple chunking (size-based)
+   orchestrator.AddHandler(new SimpleTextChunking(new TextChunkingOptions 
+   { 
+       MaxChunkSize = 1000, 
+       TextOverlap = 100 
+   }));
+   
+   // OR Semantic chunking (structure-based) - Recommended
+   orchestrator.AddHandler(new SemanticChunking(new SemanticChunkingOptions
+   {
+       TitleLevelThreshold = 2,  // Split on H1, H2 headings
+       MaxChunkSize = 1500,
+       MinChunkSize = 100
+   }));
+   
    orchestrator.AddHandler(new GenerateEmbeddingsHandler());
    orchestrator.AddHandler(new SaveRecordsHandler());
    ```

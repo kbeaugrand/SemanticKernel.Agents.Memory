@@ -4,6 +4,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using SemanticKernel.Agents.Memory.Core;
 using SemanticKernel.Agents.Memory.Core.Handlers;
 
@@ -29,22 +30,28 @@ public static class PipelineDemo
         IServiceProvider serviceProvider, 
         CancellationToken ct = default)
     {
-        var orchestrator = new ImportOrchestrator();
+        // Get logger for orchestrator
+        var logger = serviceProvider.GetService<ILogger<ImportOrchestrator>>();
+        var orchestrator = new ImportOrchestrator(logger);
         
         // Get handlers from DI container
         var textExtractionHandler = serviceProvider.GetRequiredService<TextExtractionHandler>();
         orchestrator.AddHandler(textExtractionHandler);
         
-        // Add other handlers (these don't require DI yet)
+        // Add other handlers with logging
         var chunkingOptions = new TextChunkingOptions
         {
             MaxChunkSize = 500,
             TextOverlap = 50
         };
-        orchestrator.AddHandler(new SimpleTextChunking(chunkingOptions));
+        var chunkingLogger = serviceProvider.GetService<ILogger<SimpleTextChunking>>();
+        orchestrator.AddHandler(new SimpleTextChunking(chunkingOptions, chunkingLogger));
         
-        orchestrator.AddHandler(new GenerateEmbeddingsHandler());
-        orchestrator.AddHandler(new SaveRecordsHandler());
+        var embeddingsLogger = serviceProvider.GetService<ILogger<GenerateEmbeddingsHandler>>();
+        orchestrator.AddHandler(new GenerateEmbeddingsHandler(embeddingsLogger));
+        
+        var saveRecordsLogger = serviceProvider.GetService<ILogger<SaveRecordsHandler>>();
+        orchestrator.AddHandler(new SaveRecordsHandler(saveRecordsLogger));
 
         // Create sample files to test different formats
         var request = new DocumentUploadRequest
