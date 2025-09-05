@@ -140,6 +140,17 @@ public class MemoryIngestionOptions
     }
 
     /// <summary>
+    /// Registers the default embeddings generation handler
+    /// </summary>
+    /// <typeparam name="THandler">The embeddings handler type</typeparam>
+    /// <param name="lifetime">Service lifetime (default: Scoped)</param>
+    /// <returns>The options instance for chaining</returns>
+    public MemoryIngestionOptions WithDefaultEmbeddingsGeneration(ServiceLifetime lifetime = ServiceLifetime.Scoped)
+    {
+        return WithHandler<GenerateEmbeddingsHandler>("generate-embeddings", lifetime);
+    }
+
+    /// <summary>
     /// Registers the save records handler with vector store support.
     /// </summary>
     /// <param name="vectorStore">The vector store instance</param>

@@ -19,59 +19,41 @@ This repository contains an advanced **Memory Pipeline** designed to enhance the
 - Scalable design to accommodate multi-agent systems and complex workflows  
 - Easy integration with Semantic Kernel SDK and extensible architecture for custom memory logic  
 
-## Project Structure
-
-- **`src/SemanticKernel.Agents.Memory.Abstractions`** - Core interfaces and models
-- **`src/SemanticKernel.Agents.Memory.Core`** - Core pipeline implementation and orchestration
-- **`src/SemanticKernel.Agents.Memory.Plugin`** - Semantic Kernel plugin integration
-- **`src/SemanticKernel.Agents.Memory.Service`** - Service layer implementations
-- **`src/SemanticKernel.Agents.Memory.MCP`** - Model Context Protocol integration
-- **`samples/SemanticKernel.Agents.Memory.Samples`** - Sample implementations and demos
-
 ## Getting Started
 
-### New Dependency Injection Configuration (Recommended)
+### Demo setup
 
-Configure the memory ingestion pipeline using the fluent API:
+The demo code in `samples/SemanticKernel.Agents.Memory.Samples/PipelineDemo.cs` registers configuration and composes the pipeline using the fluent API. The example below mirrors the demo:
 
 ```csharp
-using Microsoft.Extensions.DependencyInjection;
-using SemanticKernel.Agents.Memory.Core.Extensions;
-using SemanticKernel.Agents.Memory.Core.Handlers;
 
-var services = new ServiceCollection();
-services.AddLogging();
-
-// Configure memory ingestion pipeline
+// configure the memory ingestion pipeline
 services.ConfigureMemoryIngestion(options =>
 {
     options
+        // use MarkitDown extraction service running locally
         .WithMarkitDownTextExtraction("http://localhost:5000")
-        .WithTextExtraction<TextExtractionHandler>()
-        .WithSimpleTextChunking(() => new TextChunkingOptions
+        // semantic (structure-aware) chunking
+        .WithSemanticChunking(() => new SemanticChunkingOptions
         {
-            MaxChunkSize = 500,
-            TextOverlap = 50
+            MaxChunkSize = 500,         // max characters per chunk
+            MinChunkSize = 100,         // minimum characters per chunk for structure-aware splitting
+            TitleLevelThreshold = 3,    // consider headings up to this level as titles
+            IncludeTitleContext = true, // include heading/title text in chunk context
+            TextOverlap = 50            // overlapping characters between adjacent chunks
         })
-        .WithEmbeddingsGeneration<GenerateEmbeddingsHandler>()
-        .WithSaveRecords<SaveRecordsHandler>();
+        // handler that generates embeddings
+        .WithDefaultEmbeddingsGeneration(new AzureOpenAIClient(new Uri("https://<your-custom-endpoint>"), 
+                                                new DefaultAzureCredential())
+                                .GetEmbeddingClient("text-embedding-ada-002")
+                                .AsIEmbeddingGenerator())
+        // save records using an in-memory vector store instance (sample uses this for demos)
+        .WithSaveRecords(new InMemoryVectorStore());
 });
 
 var serviceProvider = services.BuildServiceProvider();
-var orchestrator = serviceProvider.GetRequiredService<ServiceImportOrchestrator>();
-```
-
-### Alternative: Semantic Chunking Configuration
-
-```csharp
-services.ConfigureMemoryIngestion(options =>
-{
-    options
-        .WithMarkitDownTextExtraction()
-        .WithSemanticChunking()  // Uses document structure for intelligent chunking
-        .WithEmbeddingsGeneration<GenerateEmbeddingsHandler>()
-        .WithSaveRecords<SaveRecordsHandler>();
-});
+// the demo resolves ImportOrchestrator from the provider
+var orchestrator = serviceProvider.GetRequiredService<ImportOrchestrator>();
 ```
 
 ### Running the Sample
@@ -83,77 +65,45 @@ cd samples/SemanticKernel.Agents.Memory.Samples
 dotnet run
 ```
 
-The sample application provides six demo options:
+The sample application demonstrates several demos (see `PipelineDemo.cs`):
 
-1. **Basic Pipeline Demo** - Original implementation with simple text chunking
-2. **Semantic Chunking Demo** - Advanced chunking based on document structure  
-3. **Chunking Strategy Comparison** - Side-by-side comparison of different chunking approaches
-4. **New DI-based Pipeline Demo** - Demonstrates the new dependency injection configuration
-5. **DI-based Semantic Chunking Demo** - Shows semantic chunking with DI configuration
-6. **DI-based Custom Configuration Demo** - Advanced configuration options with DI
+- Basic pipeline demo using simple, size-based chunking (`RunAsync`)
+- Semantic chunking demo that uses document structure (`RunSemanticChunkingAsync`)
+- Custom handler / services demo showing how to register additional services (`RunCustomHandlerAsync`)
+- Semantic chunking configuration demo with fine-grained options (`RunSemanticChunkingConfigDemo`)
 
-#### Semantic Chunking Features
+### Running the MarkitDown extraction service
 
-The semantic chunking handler provides intelligent document processing:
-- **Structure-aware**: Detects headings and creates chunks based on document organization
-- **Configurable**: Adjust title level thresholds and chunk sizes
-- **Multiple formats**: Supports Markdown (`# ## ###`), underlined headings, and numbered sections
-- **Fallback handling**: Gracefully handles unstructured content with paragraph-based chunking
+The samples call a small helper service (MarkitDown) to extract and preprocess documents. You can run it either directly with Python or via Docker. The service listens on port 5000 by default and the samples use the URL `http://localhost:5000`.
 
-Example configuration:
-```csharp
-var semanticOptions = new SemanticChunkingOptions
-{
-    TitleLevelThreshold = 2,  // Split on H2 and above
-    MaxChunkSize = 1500,      // Maximum characters per chunk
-    MinChunkSize = 100        // Minimum characters per chunk
-};
-orchestrator.AddHandler(new SemanticChunking(semanticOptions));
+Run with Python (recommended for development):
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r services/markitdown-service/requirements.txt
+python services/markitdown-service/app.py
 ```
 
-## Configuration
+Run with Docker:
+
+```bash
+docker build -t markitdown-service services/markitdown-service
+docker run --rm -p 5000:5000 markitdown-service
+```
+
+
+#### Semantic Chunking
+
+The DI example above can be configured to use semantic (structure-aware) chunking by replacing the `.WithSimpleTextChunking(...)` call with `.WithSemanticChunking(...)` and passing `SemanticChunkingOptions` (MaxChunkSize, MinChunkSize, TitleLevelThreshold, IncludeTitleContext). The sample `PipelineDemo.cs` shows concrete values and a runnable demo.
+
+### Configuration
 
 For detailed configuration options and advanced scenarios, see [CONFIGURATION.md](CONFIGURATION.md).
 
 ### Using in Your Project
 
-1. Add references to the core packages:
-   ```xml
-   <PackageReference Include="SemanticKernel.Agents.Memory.Core" Version="1.0.0" />
-   <PackageReference Include="SemanticKernel.Agents.Memory.Abstractions" Version="1.0.0" />
-   ```
-
-2. Create a pipeline orchestrator and add handlers:
-   ```csharp
-   var orchestrator = new ImportOrchestrator();
-   orchestrator.AddHandler(new TextExtractionHandler());
-   
-   // Choose your chunking strategy:
-   // Simple chunking (size-based)
-   orchestrator.AddHandler(new SimpleTextChunking(new TextChunkingOptions 
-   { 
-       MaxChunkSize = 1000, 
-       TextOverlap = 100 
-   }));
-   
-   // OR Semantic chunking (structure-based) - Recommended
-   orchestrator.AddHandler(new SemanticChunking(new SemanticChunkingOptions
-   {
-       TitleLevelThreshold = 2,  // Split on H1, H2 headings
-       MaxChunkSize = 1500,
-       MinChunkSize = 100
-   }));
-   
-   orchestrator.AddHandler(new GenerateEmbeddingsHandler());
-   orchestrator.AddHandler(new SaveRecordsHandler());
-   ```
-
-3. Process documents through the pipeline:
-   ```csharp
-   var request = new DocumentUploadRequest { /* files */ };
-   var pipeline = orchestrator.PrepareNewDocumentUpload("index", request, context);
-   await orchestrator.RunPipelineAsync(pipeline);
-   ```  
+The library can be used by composing an `ImportOrchestrator` or by wiring the DI-based pipeline as shown above. The samples demonstrate the DI-first approach and include examples of both simple and semantic chunking.
 
 ## Use Cases
 
