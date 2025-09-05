@@ -16,6 +16,7 @@ using SemanticKernel.Agents.Memory.Core;
 using SemanticKernel.Agents.Memory.Core.Extensions;
 using SemanticKernel.Agents.Memory.Core.Handlers;
 using SemanticKernel.Agents.Memory.Samples.Configuration;
+using Microsoft.SemanticKernel.Connectors.InMemory;
 
 namespace SemanticKernel.Agents.Memory.Samples;
 
@@ -73,7 +74,7 @@ public static class PipelineDemo
                     TextOverlap = chunkingConfig.Simple.TextOverlap
                 })
                 .WithEmbeddingsGeneration<GenerateEmbeddingsHandler>()
-                .WithSaveRecords<SaveRecordsHandler>();
+                .WithSaveRecords(new InMemoryVectorStore());
         });
 
         var serviceProvider = services.BuildServiceProvider();
@@ -157,7 +158,7 @@ public static class PipelineDemo
                     IncludeTitleContext = chunkingConfig.Semantic.IncludeTitleContext
                 })
                 .WithEmbeddingsGeneration<GenerateEmbeddingsHandler>()
-                .WithSaveRecords<SaveRecordsHandler>();
+                .WithSaveRecords(new InMemoryVectorStore());
         });
 
         var serviceProvider = services.BuildServiceProvider();
@@ -262,14 +263,14 @@ Final thoughts and summary of the document content."),
                 {
                     client.Timeout = pipelineConfig.HttpClientTimeout;
                 })
-                .WithSimpleTextChunking(() => new SemanticKernel.Agents.Memory.Core.Handlers.TextChunkingOptions
+                .WithSimpleTextChunking(() => new TextChunkingOptions
                 {
                     MaxChunkSize = chunkingConfig.Simple.MaxChunkSize * 2, // Custom larger size
                     TextOverlap = chunkingConfig.Simple.TextOverlap * 2,
                     SplitCharacters = chunkingConfig.Simple.SplitCharacters
                 })
                 .WithEmbeddingsGeneration<GenerateEmbeddingsHandler>()
-                .WithSaveRecords<SaveRecordsHandler>();
+                .WithSaveRecords(new InMemoryVectorStore());
         });
 
         var serviceProvider = services.BuildServiceProvider();
@@ -334,9 +335,9 @@ Final thoughts and summary of the document content."),
             bool hasRealCredentials = azureOpenAIOptions.IsValid();
             
             if (!hasRealCredentials)
-            {
-                logger?.LogWarning("Using mock embedding generator for demo purposes. To use Azure OpenAI, please configure your credentials in appsettings.json, environment variables, or user secrets.");
-                return new MockEmbeddingGenerator();
+            {            
+                logger?.LogWarning("Azure OpenAI credentials are not set or are using placeholder values. Please configure your Azure OpenAI Endpoint and ApiKey in the application settings.");
+                throw new InvalidOperationException("Azure OpenAI credentials are not configured properly.");
             }
             
             try
@@ -356,9 +357,7 @@ Final thoughts and summary of the document content."),
             {
                 logger?.LogError(ex, "Failed to configure Azure OpenAI embedding generator. Please ensure your Azure OpenAI credentials are correct.");
                 
-                // For demo purposes, create a mock embedding generator if Azure OpenAI fails
-                logger?.LogWarning("Using mock embedding generator for demo purposes. This should not be used in production.");
-                return new MockEmbeddingGenerator();
+                throw new InvalidOperationException("Failed to configure Azure OpenAI embedding generator. See inner exception for details.", ex);
             }
         });
     }
@@ -415,54 +414,7 @@ Final thoughts and summary of the document content."),
 
         public void Dispose() { }
     }
-
-    /// <summary>
-    /// Mock embedding generator for demo purposes when Azure OpenAI is not configured.
-    /// </summary>
-    private sealed class MockEmbeddingGenerator : IEmbeddingGenerator<string, Embedding<float>>
-    {
-        public EmbeddingGeneratorMetadata Metadata { get; } = new("mock-embeddings");
-
-        public async Task<GeneratedEmbeddings<Embedding<float>>> GenerateAsync(
-            IEnumerable<string> values,
-            Microsoft.Extensions.AI.EmbeddingGenerationOptions? options = null,
-            CancellationToken cancellationToken = default)
-        {
-            await Task.Delay(50, cancellationToken); // Simulate API call delay
-
-            var embeddings = values.Select(value =>
-            {
-                // Generate a deterministic but pseudo-random embedding based on the input text
-                var random = new Random(value.GetHashCode());
-                var vector = new float[1536]; // Same dimension as text-embedding-ada-002
-                for (int i = 0; i < vector.Length; i++)
-                {
-                    vector[i] = (float)(random.NextDouble() * 2.0 - 1.0); // Random values between -1 and 1
-                }
-                
-                // Normalize the vector
-                var magnitude = Math.Sqrt(vector.Sum(x => x * x));
-                if (magnitude > 0)
-                {
-                    for (int i = 0; i < vector.Length; i++)
-                    {
-                        vector[i] /= (float)magnitude;
-                    }
-                }
-
-                return new Embedding<float>(vector);
-            }).ToArray();
-
-            return new GeneratedEmbeddings<Embedding<float>>(embeddings);
-        }
-
-        public object? GetService(Type serviceType, object? serviceKey = null) => null;
-
-        public TService? GetService<TService>(object? serviceKey = null) => default;
-
-        public void Dispose() { }
-    }
-
+    
     /// <summary>
     /// Demo showing configurable semantic chunking options.
     /// </summary>
@@ -473,7 +425,7 @@ Final thoughts and summary of the document content."),
     {
         // Configure services
         var services = new ServiceCollection();
-        
+
         // Add configuration
         services.AddSingleton(configuration);
         services.Configure<AzureOpenAIOptions>(configuration.GetSection(AzureOpenAIOptions.SectionName));
@@ -482,7 +434,7 @@ Final thoughts and summary of the document content."),
         services.Configure<PipelineOptions>(configuration.GetSection(PipelineOptions.SectionName));
 
         // Add logging
-        services.AddLogging(builder => 
+        services.AddLogging(builder =>
         {
             builder.AddConfiguration(configuration.GetSection("Logging"));
             builder.AddConsole();
@@ -509,7 +461,7 @@ Final thoughts and summary of the document content."),
                     IncludeTitleContext = chunkingConfig.Semantic.IncludeTitleContext
                 })
                 .WithEmbeddingsGeneration<GenerateEmbeddingsHandler>()
-                .WithSaveRecords<SaveRecordsHandler>();
+                .WithSaveRecords(new InMemoryVectorStore());
         });
 
         var serviceProvider = services.BuildServiceProvider();
@@ -518,14 +470,14 @@ Final thoughts and summary of the document content."),
         {
             // Get the orchestrator from the service provider
             var orchestrator = serviceProvider.GetRequiredService<ImportOrchestrator>();
-            
+
             // Create a more complex document with multiple heading levels
             var request = new DocumentUploadRequest
             {
                 Files =
                 {
-                    new UploadedFile{ 
-                        FileName = "complex-document.md", 
+                    new UploadedFile{
+                        FileName = "complex-document.md",
                         Bytes = Encoding.UTF8.GetBytes(@"# Main Title
 
 This is the introduction section of our document. It provides an overview of what we'll be covering.
@@ -563,7 +515,7 @@ The conclusion ties together all the concepts discussed in the previous sections
                     }
                 }
             };
-            
+
             // Execute the pipeline
             var pipeline = orchestrator.PrepareNewDocumentUpload(index: pipelineConfig.DefaultIndex, request, context: new NoopContext());
             await orchestrator.RunPipelineAsync(pipeline, ct);

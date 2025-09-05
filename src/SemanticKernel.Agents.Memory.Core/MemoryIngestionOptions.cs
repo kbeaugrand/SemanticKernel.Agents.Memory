@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.VectorData;
 using SemanticKernel.Agents.Memory.Core.Extensions;
 using SemanticKernel.Agents.Memory.Core.Handlers;
+using SemanticKernel.Agents.Memory.Core.Services;
 
 namespace SemanticKernel.Agents.Memory.Core;
 
@@ -138,15 +140,22 @@ public class MemoryIngestionOptions
     }
 
     /// <summary>
-    /// Registers a save records handler
+    /// Registers the save records handler with vector store support.
     /// </summary>
-    /// <typeparam name="THandler">The save records handler type</typeparam>
+    /// <param name="vectorStore">The vector store instance</param>
     /// <param name="lifetime">Service lifetime (default: Scoped)</param>
     /// <returns>The options instance for chaining</returns>
-    public MemoryIngestionOptions WithSaveRecords<THandler>(ServiceLifetime lifetime = ServiceLifetime.Scoped)
-        where THandler : class, IPipelineStepHandler
+    public MemoryIngestionOptions WithSaveRecords<TVectorStore>(TVectorStore vectorStore, ServiceLifetime lifetime = ServiceLifetime.Scoped)
+        where TVectorStore : VectorStore
     {
-        return WithHandler<THandler>("save-records", lifetime);
+        if (vectorStore == null)
+            throw new ArgumentNullException(nameof(vectorStore));
+
+        // Register the vector store instance
+        ServiceRegistrations.Add(services => services.AddSingleton(vectorStore));
+        // Register the vector store save records handler
+        ServiceRegistrations.Add(services => services.AddVectorStoreSaveRecords<TVectorStore>());
+        return WithHandler<SaveRecordsHandler<TVectorStore>>("save-records", lifetime);
     }
 
     /// <summary>
