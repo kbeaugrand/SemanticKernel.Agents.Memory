@@ -12,6 +12,22 @@ namespace SemanticKernel.Agents.Memory.Core.Extensions;
 public static class ServiceCollectionExtensions
 {
     /// <summary>
+    /// Adds vector store save records handler for saving records using Microsoft.Extensions.VectorData concepts with a specific vector store type.
+    /// </summary>
+    /// <typeparam name="TVectorStore">The type of vector store</typeparam>
+    /// <param name="services">Service collection</param>
+    /// <returns>Service collection for chaining</returns>
+    public static IServiceCollection AddVectorStoreSaveRecords<TVectorStore>(this IServiceCollection services)
+        where TVectorStore : Microsoft.Extensions.VectorData.VectorStore
+    {
+        // Register the save records handler
+        services.AddScoped<SaveRecordsHandler<TVectorStore>>();
+        services.AddScoped<IPipelineStepHandler, SaveRecordsHandler<TVectorStore>>();
+
+        return services;
+    }
+
+    /// <summary>
     /// Adds MarkitDown text extraction services to the dependency injection container
     /// </summary>
     /// <param name="services">Service collection</param>
