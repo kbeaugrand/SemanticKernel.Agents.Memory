@@ -327,9 +327,9 @@ Final thoughts and summary of the document content."),
     private static void ConfigureAzureOpenAIEmbeddings(IServiceCollection services)
     {
         // Configure the Azure OpenAI embedding generator
-        services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(serviceProvider =>
+        services.AddSingleton(serviceProvider =>
         {
-            var logger = serviceProvider.GetService<ILogger<AzureOpenAIEmbeddingGenerator>>();
+            var logger = serviceProvider.GetService<ILogger<IEmbeddingGenerator<string, Embedding<float>>>>();
             var azureOpenAIOptions = serviceProvider.GetService<IOptions<AzureOpenAIOptions>>()?.Value ?? new AzureOpenAIOptions();
             
             // Check if we have real credentials (not placeholders)
@@ -363,59 +363,6 @@ Final thoughts and summary of the document content."),
         });
     }
 
-    /// <summary>
-    /// Azure OpenAI embedding generator implementation.
-    /// </summary>
-    private sealed class AzureOpenAIEmbeddingGenerator : IEmbeddingGenerator<string, Embedding<float>>
-    {
-        private readonly EmbeddingClient _embeddingClient;
-        private readonly string _modelName;
-        private readonly ILogger? _logger;
-
-        public AzureOpenAIEmbeddingGenerator(EmbeddingClient embeddingClient, string modelName, ILogger? logger = null)
-        {
-            _embeddingClient = embeddingClient ?? throw new ArgumentNullException(nameof(embeddingClient));
-            _modelName = modelName ?? throw new ArgumentNullException(nameof(modelName));
-            _logger = logger;
-        }
-
-        public EmbeddingGeneratorMetadata Metadata { get; } = new("azure-openai-embeddings");
-
-        public async Task<GeneratedEmbeddings<Embedding<float>>> GenerateAsync(
-            IEnumerable<string> values,
-            Microsoft.Extensions.AI.EmbeddingGenerationOptions? options = null,
-            CancellationToken cancellationToken = default)
-        {
-            var inputTexts = values.ToArray();
-            _logger?.LogDebug("Generating embeddings for {Count} texts using Azure OpenAI model: {ModelName}", inputTexts.Length, _modelName);
-
-            try
-            {
-                var response = await _embeddingClient.GenerateEmbeddingsAsync(inputTexts, new OpenAI.Embeddings.EmbeddingGenerationOptions(), cancellationToken);
-                
-                var embeddings = response.Value.Select(embeddingItem =>
-                {
-                    var vector = embeddingItem.ToFloats().ToArray();
-                    return new Embedding<float>(vector);
-                }).ToArray();
-
-                _logger?.LogDebug("Successfully generated {Count} embeddings", embeddings.Length);
-                return new GeneratedEmbeddings<Embedding<float>>(embeddings);
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, "Failed to generate embeddings using Azure OpenAI");
-                throw;
-            }
-        }
-
-        public object? GetService(Type serviceType, object? serviceKey = null) => null;
-
-        public TService? GetService<TService>(object? serviceKey = null) => default;
-
-        public void Dispose() { }
-    }
-    
     /// <summary>
     /// Demo showing configurable semantic chunking options.
     /// </summary>
