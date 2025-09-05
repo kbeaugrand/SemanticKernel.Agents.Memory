@@ -22,7 +22,7 @@ class Program
         var configuration = BuildConfiguration();
         
         Console.WriteLine("Available demos:");
-        Console.WriteLine("1. Basic Pipeline Demo");
+        Console.WriteLine("1. Basic Pipeline Demo (includes fluent API examples)");
         Console.WriteLine("2. Semantic Chunking Demo");
         Console.WriteLine("3. Custom Configuration Demo");
         Console.WriteLine("4. Semantic Chunking with Custom Options");
@@ -101,16 +101,44 @@ class Program
     {
         Console.WriteLine("\n=== Running Pipeline Demo ===");
         Console.WriteLine();
-        Console.WriteLine("This demo shows the pipeline configuration approach.");
+        Console.WriteLine("This demo shows both pipeline configuration approach and fluent API examples.");
         Console.WriteLine();
         
-        var (documentId, logs) = await PipelineDemo.RunAsync(configuration);
+        // Run the original pipeline demo
+        Console.WriteLine("1. Traditional Pipeline Configuration:");
+        var (documentId1, logs1) = await PipelineDemo.RunAsync(configuration);
         
-        Console.WriteLine($"Document processed successfully! Document ID: {documentId}");
+        Console.WriteLine($"Document processed successfully! Document ID: {documentId1}");
         Console.WriteLine("\nPipeline execution logs:");
         Console.WriteLine("------------------------");
         
-        foreach (var log in logs)
+        foreach (var log in logs1)
+        {
+            Console.WriteLine($"[{log.Time:HH:mm:ss}] {log.Source}: {log.Text}");
+        }
+        
+        Console.WriteLine();
+        Console.WriteLine("2. Fluent API Example - Multiple Upload Methods:");
+        var (documentId2, logs2) = await PipelineDemo.RunFluentApiDemo(configuration);
+        
+        Console.WriteLine($"Document processed successfully! Document ID: {documentId2}");
+        Console.WriteLine("\nPipeline execution logs:");
+        Console.WriteLine("------------------------");
+        
+        foreach (var log in logs2)
+        {
+            Console.WriteLine($"[{log.Time:HH:mm:ss}] {log.Source}: {log.Text}");
+        }
+        
+        Console.WriteLine();
+        Console.WriteLine("3. Fluent API Example - File Path Uploads:");
+        var (documentId3, logs3) = await PipelineDemo.RunFluentApiFilePathDemo(configuration);
+        
+        Console.WriteLine($"Document processed successfully! Document ID: {documentId3}");
+        Console.WriteLine("\nPipeline execution logs:");
+        Console.WriteLine("------------------------");
+        
+        foreach (var log in logs3)
         {
             Console.WriteLine($"[{log.Time:HH:mm:ss}] {log.Source}: {log.Text}");
         }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -281,22 +282,17 @@ Final thoughts and summary of the document content."),
             // Get the orchestrator from the service provider
             var orchestrator = serviceProvider.GetRequiredService<ImportOrchestrator>();
             
-            // Create sample files
-            var request = new DocumentUploadRequest
-            {
-                Files =
-                {
-                    new UploadedFile{ 
-                        FileName = "large-document.txt", 
-                        Bytes = Encoding.UTF8.GetBytes(GenerateLargeText()),
-                        MimeType = "text/plain"
-                    }
-                }
-            };
-
-            var pipeline = orchestrator.PrepareNewDocumentUpload(index: pipelineConfig.DefaultIndex, request, context: new NoopContext());
-            await orchestrator.RunPipelineAsync(pipeline, ct);
-            return (pipeline.DocumentId, pipeline.Logs);
+            // Create sample files using the fluent API
+            var (documentId, logs) = await orchestrator.ProcessUploadAsync(
+                index: pipelineConfig.DefaultIndex,
+                builder: orchestrator.NewDocumentUpload()
+                    .WithFile("large-document.txt", Encoding.UTF8.GetBytes(GenerateLargeText()))
+                    .WithTag("demo", "fluent-api")
+                    .WithTag("size", "large"),
+                context: new NoopContext(),
+                ct);
+            
+            return (documentId, logs);
         }
         finally
         {
@@ -472,6 +468,196 @@ The conclusion ties together all the concepts discussed in the previous sections
         finally
         {
             // Clean up
+            serviceProvider.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// Demonstrates the fluent API for file uploads with various upload methods.
+    /// This method is integrated into the main pipeline demo.
+    /// </summary>
+    /// <param name="configuration">The configuration instance.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>A tuple containing the document ID and pipeline logs.</returns>
+    public static async Task<(string DocumentId, IReadOnlyList<PipelineLogEntry> Logs)> RunFluentApiDemo(IConfiguration configuration, CancellationToken ct = default)
+    {
+        // Configure services
+        var services = new ServiceCollection();
+
+        // Add configuration
+        services.AddSingleton(configuration);
+        services.Configure<AzureOpenAIOptions>(configuration.GetSection(AzureOpenAIOptions.SectionName));
+        services.Configure<MarkitDownOptions>(configuration.GetSection(MarkitDownOptions.SectionName));
+        services.Configure<TextChunkingConfig>(configuration.GetSection(TextChunkingConfig.SectionName));
+        services.Configure<PipelineOptions>(configuration.GetSection(PipelineOptions.SectionName));
+
+        // Add logging
+        services.AddLogging(builder =>
+        {
+            builder.AddConfiguration(configuration.GetSection("Logging"));
+            builder.AddConsole();
+        });
+
+        // Configure Azure OpenAI embedding generator
+        ConfigureAzureOpenAIEmbeddings(services);
+
+        // Get configuration options
+        var chunkingConfig = configuration.GetSection(TextChunkingConfig.SectionName).Get<TextChunkingConfig>() ?? new TextChunkingConfig();
+        var markitDownConfig = configuration.GetSection(MarkitDownOptions.SectionName).Get<MarkitDownOptions>() ?? new MarkitDownOptions();
+        var pipelineConfig = configuration.GetSection(PipelineOptions.SectionName).Get<PipelineOptions>() ?? new PipelineOptions();
+
+        // Configure memory ingestion pipeline
+        services.ConfigureMemoryIngestion(options =>
+        {
+            options
+                .WithMarkitDownTextExtraction(markitDownConfig.ServiceUrl)
+                .WithSimpleTextChunking(() => new TextChunkingOptions
+                {
+                    MaxChunkSize = chunkingConfig.Simple.MaxChunkSize,
+                    TextOverlap = chunkingConfig.Simple.TextOverlap
+                })
+                .WithDefaultEmbeddingsGeneration()
+                .WithSaveRecords(new InMemoryVectorStore());
+        });
+
+        var serviceProvider = services.BuildServiceProvider();
+
+        try
+        {
+            // Get the orchestrator from the service provider
+            var orchestrator = serviceProvider.GetRequiredService<ImportOrchestrator>();
+
+            // Demonstrate different fluent API upload methods
+            
+            // Method 1: Using the fluent builder with multiple upload methods
+            var (documentId, logs) = await orchestrator.ProcessUploadAsync(
+                index: pipelineConfig.DefaultIndex,
+                builder: orchestrator.NewDocumentUpload()
+                    // Add a file from byte array with automatic MIME type detection
+                    .WithFile("sample.txt", Encoding.UTF8.GetBytes("This is a sample text file for testing."))
+                    // Add a file from byte array with custom MIME type
+                    .WithFile("custom.data", Encoding.UTF8.GetBytes("Custom data content"), "text/plain")
+                    // Add a file from memory stream
+                    .WithFile("stream-file.md", new MemoryStream(Encoding.UTF8.GetBytes("# Stream File\n\nThis file was uploaded from a stream.")))
+                    // Add tags to categorize the upload
+                    .WithTag("demo", "fluent-api")
+                    .WithTag("method", "multiple-files")
+                    .WithTag("source", "memory")
+                    // Add context data
+                    .WithContext("upload_reason", "demonstration")
+                    .WithContext("batch_size", 3),
+                context: new NoopContext(),
+                ct);
+
+            return (documentId, logs);
+        }
+        finally
+        {
+            serviceProvider.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// Demonstrates uploading files from file paths using the fluent API.
+    /// This method is integrated into the main pipeline demo.
+    /// </summary>
+    /// <param name="configuration">The configuration instance.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>A tuple containing the document ID and pipeline logs.</returns>
+    public static async Task<(string DocumentId, IReadOnlyList<PipelineLogEntry> Logs)> RunFluentApiFilePathDemo(IConfiguration configuration, CancellationToken ct = default)
+    {
+        // Configure services
+        var services = new ServiceCollection();
+
+        // Add configuration
+        services.AddSingleton(configuration);
+        services.Configure<AzureOpenAIOptions>(configuration.GetSection(AzureOpenAIOptions.SectionName));
+        services.Configure<MarkitDownOptions>(configuration.GetSection(MarkitDownOptions.SectionName));
+        services.Configure<TextChunkingConfig>(configuration.GetSection(TextChunkingConfig.SectionName));
+        services.Configure<PipelineOptions>(configuration.GetSection(PipelineOptions.SectionName));
+
+        // Add logging
+        services.AddLogging(builder =>
+        {
+            builder.AddConfiguration(configuration.GetSection("Logging"));
+            builder.AddConsole();
+        });
+
+        // Configure Azure OpenAI embedding generator
+        ConfigureAzureOpenAIEmbeddings(services);
+
+        // Get configuration options
+        var chunkingConfig = configuration.GetSection(TextChunkingConfig.SectionName).Get<TextChunkingConfig>() ?? new TextChunkingConfig();
+        var markitDownConfig = configuration.GetSection(MarkitDownOptions.SectionName).Get<MarkitDownOptions>() ?? new MarkitDownOptions();
+        var pipelineConfig = configuration.GetSection(PipelineOptions.SectionName).Get<PipelineOptions>() ?? new PipelineOptions();
+
+        // Configure memory ingestion pipeline
+        services.ConfigureMemoryIngestion(options =>
+        {
+            options
+                .WithMarkitDownTextExtraction(markitDownConfig.ServiceUrl)
+                .WithSimpleTextChunking(() => new TextChunkingOptions
+                {
+                    MaxChunkSize = chunkingConfig.Simple.MaxChunkSize,
+                    TextOverlap = chunkingConfig.Simple.TextOverlap
+                })
+                .WithDefaultEmbeddingsGeneration()
+                .WithSaveRecords(new InMemoryVectorStore());
+        });
+
+        var serviceProvider = services.BuildServiceProvider();
+
+        try
+        {
+            // Get the orchestrator from the service provider
+            var orchestrator = serviceProvider.GetRequiredService<ImportOrchestrator>();
+
+            // Create temporary files for demonstration
+            var tempDir = Path.GetTempPath();
+            var tempFile1 = Path.Combine(tempDir, "demo1.txt");
+            var tempFile2 = Path.Combine(tempDir, "demo2.md");
+
+            await File.WriteAllTextAsync(tempFile1, "This is demo file 1 content.", ct);
+            await File.WriteAllTextAsync(tempFile2, "# Demo File 2\n\nThis is demo file 2 content in markdown.", ct);
+
+            try
+            {
+                // Method 2: Simple single file upload by path
+                var documentId1 = await orchestrator.UploadFileAsync(
+                    index: pipelineConfig.DefaultIndex,
+                    filePath: tempFile1,
+                    context: new NoopContext(),
+                    cancellationToken: ct);
+
+                // Method 3: Multiple files upload by paths
+                var documentId2 = await orchestrator.UploadFilesAsync(
+                    index: pipelineConfig.DefaultIndex,
+                    filePaths: new[] { tempFile1, tempFile2 },
+                    context: new NoopContext(),
+                    cancellationToken: ct);
+
+                // Method 4: Using fluent builder with file paths
+                var (documentId3, logs) = await orchestrator.ProcessUploadAsync(
+                    index: pipelineConfig.DefaultIndex,
+                    builder: orchestrator.NewDocumentUpload()
+                        .WithFile(tempFile1, "renamed-demo1.txt") // Upload with custom name
+                        .WithFile(tempFile2) // Upload with original name
+                        .WithTag("demo", "file-paths")
+                        .WithTag("files", "2"),
+                    context: new NoopContext(),
+                    ct);
+
+                return (documentId3, logs);
+            }
+            finally
+            {
+                // Clean up temporary files
+                try { File.Delete(tempFile1); } catch { }
+                try { File.Delete(tempFile2); } catch { }
+            }
+        }
+        finally
+        {
             serviceProvider.Dispose();
         }
     }
