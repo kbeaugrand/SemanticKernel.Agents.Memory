@@ -41,7 +41,7 @@ public static class PipelineDemo
             MaxChunkSize = 500,
             TextOverlap = 50
         };
-        orchestrator.AddHandler(new TextChunkingHandler(chunkingOptions));
+        orchestrator.AddHandler(new SimpleTextChunking(chunkingOptions));
         
         orchestrator.AddHandler(new GenerateEmbeddingsHandler());
         orchestrator.AddHandler(new SaveRecordsHandler());

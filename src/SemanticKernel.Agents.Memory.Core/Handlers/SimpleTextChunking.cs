@@ -33,14 +33,14 @@ public sealed class TextChunkingOptions
 /// Text chunking pipeline step handler.
 /// Splits extracted text into smaller, overlapping chunks for better processing.
 /// </summary>
-public sealed class TextChunkingHandler : IPipelineStepHandler
+public sealed class SimpleTextChunking : IPipelineStepHandler
 {
     public const string Name = "text-chunking";
     public string StepName => Name;
 
     private readonly TextChunkingOptions _options;
 
-    public TextChunkingHandler(TextChunkingOptions? options = null)
+    public SimpleTextChunking(TextChunkingOptions? options = null)
     {
         _options = options ?? new TextChunkingOptions();
     }
