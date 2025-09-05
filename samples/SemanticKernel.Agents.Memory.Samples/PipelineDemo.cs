@@ -1,13 +1,21 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
+using Azure.AI.OpenAI;
+using Azure;
+using OpenAI.Embeddings;
 using SemanticKernel.Agents.Memory.Core;
 using SemanticKernel.Agents.Memory.Core.Extensions;
 using SemanticKernel.Agents.Memory.Core.Handlers;
+using SemanticKernel.Agents.Memory.Samples.Configuration;
 
 namespace SemanticKernel.Agents.Memory.Samples;
 
@@ -24,29 +32,45 @@ public static class PipelineDemo
     /// <summary>
     /// Runs a complete pipeline demo with configuration.
     /// </summary>
+    /// <param name="configuration">The configuration instance.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A tuple containing the document ID and pipeline logs.</returns>
-    public static async Task<(string DocumentId, IReadOnlyList<PipelineLogEntry> Logs)> RunAsync(CancellationToken ct = default)
+    public static async Task<(string DocumentId, IReadOnlyList<PipelineLogEntry> Logs)> RunAsync(IConfiguration configuration, CancellationToken ct = default)
     {
         // Configure services
         var services = new ServiceCollection();
         
+        // Add configuration
+        services.AddSingleton(configuration);
+        services.Configure<AzureOpenAIOptions>(configuration.GetSection(AzureOpenAIOptions.SectionName));
+        services.Configure<MarkitDownOptions>(configuration.GetSection(MarkitDownOptions.SectionName));
+        services.Configure<TextChunkingConfig>(configuration.GetSection(TextChunkingConfig.SectionName));
+        services.Configure<PipelineOptions>(configuration.GetSection(PipelineOptions.SectionName));
+
         // Add logging
         services.AddLogging(builder => 
         {
+            builder.AddConfiguration(configuration.GetSection("Logging"));
             builder.AddConsole();
-            builder.SetMinimumLevel(LogLevel.Debug);
         });
+
+        // Configure Azure OpenAI embedding generator
+        ConfigureAzureOpenAIEmbeddings(services);
+
+        // Get configuration options
+        var chunkingConfig = configuration.GetSection(TextChunkingConfig.SectionName).Get<TextChunkingConfig>() ?? new TextChunkingConfig();
+        var markitDownConfig = configuration.GetSection(MarkitDownOptions.SectionName).Get<MarkitDownOptions>() ?? new MarkitDownOptions();
+        var pipelineConfig = configuration.GetSection(PipelineOptions.SectionName).Get<PipelineOptions>() ?? new PipelineOptions();
 
         // Configure memory ingestion pipeline using the fluent API
         services.ConfigureMemoryIngestion(options =>
         {
             options
-                .WithMarkitDownTextExtraction("http://localhost:5000")
-                .WithSimpleTextChunking(() => new TextChunkingOptions
+                .WithMarkitDownTextExtraction(markitDownConfig.ServiceUrl)
+                .WithSimpleTextChunking(() => new SemanticKernel.Agents.Memory.Core.Handlers.TextChunkingOptions
                 {
-                    MaxChunkSize = 500,
-                    TextOverlap = 50
+                    MaxChunkSize = chunkingConfig.Simple.MaxChunkSize,
+                    TextOverlap = chunkingConfig.Simple.TextOverlap
                 })
                 .WithEmbeddingsGeneration<GenerateEmbeddingsHandler>()
                 .WithSaveRecords<SaveRecordsHandler>();
@@ -77,7 +101,7 @@ public static class PipelineDemo
                 }
             };
 
-            var pipeline = orchestrator.PrepareNewDocumentUpload(index: "docs", request, context: new NoopContext());
+            var pipeline = orchestrator.PrepareNewDocumentUpload(index: pipelineConfig.DefaultIndex, request, context: new NoopContext());
             await orchestrator.RunPipelineAsync(pipeline, ct);
             return (pipeline.DocumentId, pipeline.Logs);
         }
@@ -90,26 +114,48 @@ public static class PipelineDemo
     /// <summary>
     /// Demonstrates alternative configuration with semantic chunking.
     /// </summary>
+    /// <param name="configuration">The configuration instance.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A tuple containing the document ID and pipeline logs.</returns>
-    public static async Task<(string DocumentId, IReadOnlyList<PipelineLogEntry> Logs)> RunSemanticChunkingAsync(CancellationToken ct = default)
+    public static async Task<(string DocumentId, IReadOnlyList<PipelineLogEntry> Logs)> RunSemanticChunkingAsync(IConfiguration configuration, CancellationToken ct = default)
     {
         // Configure services with semantic chunking
         var services = new ServiceCollection();
         
+        // Add configuration
+        services.AddSingleton(configuration);
+        services.Configure<AzureOpenAIOptions>(configuration.GetSection(AzureOpenAIOptions.SectionName));
+        services.Configure<MarkitDownOptions>(configuration.GetSection(MarkitDownOptions.SectionName));
+        services.Configure<TextChunkingConfig>(configuration.GetSection(TextChunkingConfig.SectionName));
+        services.Configure<PipelineOptions>(configuration.GetSection(PipelineOptions.SectionName));
+
         // Add logging
         services.AddLogging(builder => 
         {
+            builder.AddConfiguration(configuration.GetSection("Logging"));
             builder.AddConsole();
-            builder.SetMinimumLevel(LogLevel.Debug);
         });
+
+        // Configure Azure OpenAI embedding generator
+        ConfigureAzureOpenAIEmbeddings(services);
+
+        // Get configuration options
+        var chunkingConfig = configuration.GetSection(TextChunkingConfig.SectionName).Get<TextChunkingConfig>() ?? new TextChunkingConfig();
+        var markitDownConfig = configuration.GetSection(MarkitDownOptions.SectionName).Get<MarkitDownOptions>() ?? new MarkitDownOptions();
+        var pipelineConfig = configuration.GetSection(PipelineOptions.SectionName).Get<PipelineOptions>() ?? new PipelineOptions();
 
         // Configure memory ingestion pipeline with semantic chunking
         services.ConfigureMemoryIngestion(options =>
         {
             options
-                .WithMarkitDownTextExtraction("http://localhost:5000")
-                .WithSemanticChunking()  // Use semantic chunking instead of simple chunking
+                .WithMarkitDownTextExtraction(markitDownConfig.ServiceUrl)
+                .WithSemanticChunking(new SemanticKernel.Agents.Memory.Core.Handlers.SemanticChunkingOptions
+                {
+                    MaxChunkSize = chunkingConfig.Semantic.MaxChunkSize,
+                    MinChunkSize = chunkingConfig.Semantic.MinChunkSize,
+                    TitleLevelThreshold = chunkingConfig.Semantic.TitleLevelThreshold,
+                    IncludeTitleContext = chunkingConfig.Semantic.IncludeTitleContext
+                })
                 .WithEmbeddingsGeneration<GenerateEmbeddingsHandler>()
                 .WithSaveRecords<SaveRecordsHandler>();
         });
@@ -160,7 +206,7 @@ Final thoughts and summary of the document content."),
                 }
             };
 
-            var pipeline = orchestrator.PrepareNewDocumentUpload(index: "docs", request, context: new NoopContext());
+            var pipeline = orchestrator.PrepareNewDocumentUpload(index: pipelineConfig.DefaultIndex, request, context: new NoopContext());
             await orchestrator.RunPipelineAsync(pipeline, ct);
             return (pipeline.DocumentId, pipeline.Logs);
         }
@@ -173,19 +219,35 @@ Final thoughts and summary of the document content."),
     /// <summary>
     /// Demonstrates custom handler registration.
     /// </summary>
+    /// <param name="configuration">The configuration instance.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A tuple containing the document ID and pipeline logs.</returns>
-    public static async Task<(string DocumentId, IReadOnlyList<PipelineLogEntry> Logs)> RunCustomHandlerAsync(CancellationToken ct = default)
+    public static async Task<(string DocumentId, IReadOnlyList<PipelineLogEntry> Logs)> RunCustomHandlerAsync(IConfiguration configuration, CancellationToken ct = default)
     {
         // Configure services with custom handler and services
         var services = new ServiceCollection();
         
+        // Add configuration
+        services.AddSingleton(configuration);
+        services.Configure<AzureOpenAIOptions>(configuration.GetSection(AzureOpenAIOptions.SectionName));
+        services.Configure<MarkitDownOptions>(configuration.GetSection(MarkitDownOptions.SectionName));
+        services.Configure<TextChunkingConfig>(configuration.GetSection(TextChunkingConfig.SectionName));
+        services.Configure<PipelineOptions>(configuration.GetSection(PipelineOptions.SectionName));
+
         // Add logging
         services.AddLogging(builder => 
         {
+            builder.AddConfiguration(configuration.GetSection("Logging"));
             builder.AddConsole();
-            builder.SetMinimumLevel(LogLevel.Debug);
         });
+
+        // Configure Azure OpenAI embedding generator
+        ConfigureAzureOpenAIEmbeddings(services);
+
+        // Get configuration options
+        var chunkingConfig = configuration.GetSection(TextChunkingConfig.SectionName).Get<TextChunkingConfig>() ?? new TextChunkingConfig();
+        var markitDownConfig = configuration.GetSection(MarkitDownOptions.SectionName).Get<MarkitDownOptions>() ?? new MarkitDownOptions();
+        var pipelineConfig = configuration.GetSection(PipelineOptions.SectionName).Get<PipelineOptions>() ?? new PipelineOptions();
 
         // Configure memory ingestion pipeline with custom services
         services.ConfigureMemoryIngestion(options =>
@@ -198,13 +260,13 @@ Final thoughts and summary of the document content."),
                 })
                 .WithMarkitDownTextExtraction(client =>
                 {
-                    client.Timeout = TimeSpan.FromMinutes(10); // Custom timeout
+                    client.Timeout = pipelineConfig.HttpClientTimeout;
                 })
-                .WithSimpleTextChunking(() => new TextChunkingOptions
+                .WithSimpleTextChunking(() => new SemanticKernel.Agents.Memory.Core.Handlers.TextChunkingOptions
                 {
-                    MaxChunkSize = 1000,
-                    TextOverlap = 100,
-                    SplitCharacters = new[] { "\n\n", "\n", ". " }
+                    MaxChunkSize = chunkingConfig.Simple.MaxChunkSize * 2, // Custom larger size
+                    TextOverlap = chunkingConfig.Simple.TextOverlap * 2,
+                    SplitCharacters = chunkingConfig.Simple.SplitCharacters
                 })
                 .WithEmbeddingsGeneration<GenerateEmbeddingsHandler>()
                 .WithSaveRecords<SaveRecordsHandler>();
@@ -230,7 +292,7 @@ Final thoughts and summary of the document content."),
                 }
             };
 
-            var pipeline = orchestrator.PrepareNewDocumentUpload(index: "docs", request, context: new NoopContext());
+            var pipeline = orchestrator.PrepareNewDocumentUpload(index: pipelineConfig.DefaultIndex, request, context: new NoopContext());
             await orchestrator.RunPipelineAsync(pipeline, ct);
             return (pipeline.DocumentId, pipeline.Logs);
         }
@@ -257,33 +319,194 @@ Final thoughts and summary of the document content."),
     }
 
     /// <summary>
+    /// Configures Azure OpenAI embedding generation services.
+    /// </summary>
+    /// <param name="services">The service collection to configure.</param>
+    private static void ConfigureAzureOpenAIEmbeddings(IServiceCollection services)
+    {
+        // Configure the Azure OpenAI embedding generator
+        services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(serviceProvider =>
+        {
+            var logger = serviceProvider.GetService<ILogger<AzureOpenAIEmbeddingGenerator>>();
+            var azureOpenAIOptions = serviceProvider.GetService<IOptions<AzureOpenAIOptions>>()?.Value ?? new AzureOpenAIOptions();
+            
+            // Check if we have real credentials (not placeholders)
+            bool hasRealCredentials = azureOpenAIOptions.IsValid();
+            
+            if (!hasRealCredentials)
+            {
+                logger?.LogWarning("Using mock embedding generator for demo purposes. To use Azure OpenAI, please configure your credentials in appsettings.json, environment variables, or user secrets.");
+                return new MockEmbeddingGenerator();
+            }
+            
+            try
+            {
+                // Create Azure OpenAI client
+                var azureOpenAIClient = new AzureOpenAIClient(new Uri(azureOpenAIOptions.Endpoint), new AzureKeyCredential(azureOpenAIOptions.ApiKey));
+                
+                // Get embedding client and wrap it
+                var embeddingClient = azureOpenAIClient.GetEmbeddingClient(azureOpenAIOptions.EmbeddingModel);
+                var embeddingGenerator = new AzureOpenAIEmbeddingGenerator(embeddingClient, azureOpenAIOptions.EmbeddingModel, logger);
+
+                logger?.LogInformation("Azure OpenAI embedding generator configured successfully with model: {ModelName}", azureOpenAIOptions.EmbeddingModel);
+                
+                return embeddingGenerator;
+            }
+            catch (Exception ex)
+            {
+                logger?.LogError(ex, "Failed to configure Azure OpenAI embedding generator. Please ensure your Azure OpenAI credentials are correct.");
+                
+                // For demo purposes, create a mock embedding generator if Azure OpenAI fails
+                logger?.LogWarning("Using mock embedding generator for demo purposes. This should not be used in production.");
+                return new MockEmbeddingGenerator();
+            }
+        });
+    }
+
+    /// <summary>
+    /// Azure OpenAI embedding generator implementation.
+    /// </summary>
+    private sealed class AzureOpenAIEmbeddingGenerator : IEmbeddingGenerator<string, Embedding<float>>
+    {
+        private readonly EmbeddingClient _embeddingClient;
+        private readonly string _modelName;
+        private readonly ILogger? _logger;
+
+        public AzureOpenAIEmbeddingGenerator(EmbeddingClient embeddingClient, string modelName, ILogger? logger = null)
+        {
+            _embeddingClient = embeddingClient ?? throw new ArgumentNullException(nameof(embeddingClient));
+            _modelName = modelName ?? throw new ArgumentNullException(nameof(modelName));
+            _logger = logger;
+        }
+
+        public EmbeddingGeneratorMetadata Metadata { get; } = new("azure-openai-embeddings");
+
+        public async Task<GeneratedEmbeddings<Embedding<float>>> GenerateAsync(
+            IEnumerable<string> values,
+            Microsoft.Extensions.AI.EmbeddingGenerationOptions? options = null,
+            CancellationToken cancellationToken = default)
+        {
+            var inputTexts = values.ToArray();
+            _logger?.LogDebug("Generating embeddings for {Count} texts using Azure OpenAI model: {ModelName}", inputTexts.Length, _modelName);
+
+            try
+            {
+                var response = await _embeddingClient.GenerateEmbeddingsAsync(inputTexts, new OpenAI.Embeddings.EmbeddingGenerationOptions(), cancellationToken);
+                
+                var embeddings = response.Value.Select(embeddingItem =>
+                {
+                    var vector = embeddingItem.ToFloats().ToArray();
+                    return new Embedding<float>(vector);
+                }).ToArray();
+
+                _logger?.LogDebug("Successfully generated {Count} embeddings", embeddings.Length);
+                return new GeneratedEmbeddings<Embedding<float>>(embeddings);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Failed to generate embeddings using Azure OpenAI");
+                throw;
+            }
+        }
+
+        public object? GetService(Type serviceType, object? serviceKey = null) => null;
+
+        public TService? GetService<TService>(object? serviceKey = null) => default;
+
+        public void Dispose() { }
+    }
+
+    /// <summary>
+    /// Mock embedding generator for demo purposes when Azure OpenAI is not configured.
+    /// </summary>
+    private sealed class MockEmbeddingGenerator : IEmbeddingGenerator<string, Embedding<float>>
+    {
+        public EmbeddingGeneratorMetadata Metadata { get; } = new("mock-embeddings");
+
+        public async Task<GeneratedEmbeddings<Embedding<float>>> GenerateAsync(
+            IEnumerable<string> values,
+            Microsoft.Extensions.AI.EmbeddingGenerationOptions? options = null,
+            CancellationToken cancellationToken = default)
+        {
+            await Task.Delay(50, cancellationToken); // Simulate API call delay
+
+            var embeddings = values.Select(value =>
+            {
+                // Generate a deterministic but pseudo-random embedding based on the input text
+                var random = new Random(value.GetHashCode());
+                var vector = new float[1536]; // Same dimension as text-embedding-ada-002
+                for (int i = 0; i < vector.Length; i++)
+                {
+                    vector[i] = (float)(random.NextDouble() * 2.0 - 1.0); // Random values between -1 and 1
+                }
+                
+                // Normalize the vector
+                var magnitude = Math.Sqrt(vector.Sum(x => x * x));
+                if (magnitude > 0)
+                {
+                    for (int i = 0; i < vector.Length; i++)
+                    {
+                        vector[i] /= (float)magnitude;
+                    }
+                }
+
+                return new Embedding<float>(vector);
+            }).ToArray();
+
+            return new GeneratedEmbeddings<Embedding<float>>(embeddings);
+        }
+
+        public object? GetService(Type serviceType, object? serviceKey = null) => null;
+
+        public TService? GetService<TService>(object? serviceKey = null) => default;
+
+        public void Dispose() { }
+    }
+
+    /// <summary>
     /// Demo showing configurable semantic chunking options.
     /// </summary>
+    /// <param name="configuration">The configuration instance.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A tuple containing the document ID and pipeline logs.</returns>
-    public static async Task<(string DocumentId, IReadOnlyList<PipelineLogEntry> Logs)> RunSemanticChunkingConfigDemo(CancellationToken ct = default)
+    public static async Task<(string DocumentId, IReadOnlyList<PipelineLogEntry> Logs)> RunSemanticChunkingConfigDemo(IConfiguration configuration, CancellationToken ct = default)
     {
         // Configure services
         var services = new ServiceCollection();
         
+        // Add configuration
+        services.AddSingleton(configuration);
+        services.Configure<AzureOpenAIOptions>(configuration.GetSection(AzureOpenAIOptions.SectionName));
+        services.Configure<MarkitDownOptions>(configuration.GetSection(MarkitDownOptions.SectionName));
+        services.Configure<TextChunkingConfig>(configuration.GetSection(TextChunkingConfig.SectionName));
+        services.Configure<PipelineOptions>(configuration.GetSection(PipelineOptions.SectionName));
+
         // Add logging
         services.AddLogging(builder => 
         {
+            builder.AddConfiguration(configuration.GetSection("Logging"));
             builder.AddConsole();
-            builder.SetMinimumLevel(LogLevel.Debug);
         });
+
+        // Configure Azure OpenAI embedding generator
+        ConfigureAzureOpenAIEmbeddings(services);
+
+        // Get configuration options
+        var chunkingConfig = configuration.GetSection(TextChunkingConfig.SectionName).Get<TextChunkingConfig>() ?? new TextChunkingConfig();
+        var markitDownConfig = configuration.GetSection(MarkitDownOptions.SectionName).Get<MarkitDownOptions>() ?? new MarkitDownOptions();
+        var pipelineConfig = configuration.GetSection(PipelineOptions.SectionName).Get<PipelineOptions>() ?? new PipelineOptions();
 
         // Configure memory ingestion pipeline with custom semantic chunking options
         services.ConfigureMemoryIngestion(options =>
         {
             options
-                .WithMarkitDownTextExtraction("http://localhost:5000")
-                .WithSemanticChunking(new SemanticChunkingOptions
+                .WithMarkitDownTextExtraction(markitDownConfig.ServiceUrl)
+                .WithSemanticChunking(new SemanticKernel.Agents.Memory.Core.Handlers.SemanticChunkingOptions
                 {
-                    MaxChunkSize = 3000,           // Larger chunks for more context
-                    MinChunkSize = 200,            // Larger minimum to avoid tiny chunks
-                    TitleLevelThreshold = 1,       // Split on H1 headers
-                    IncludeTitleContext = true     // Include title context in chunks
+                    MaxChunkSize = chunkingConfig.Semantic.MaxChunkSize,
+                    MinChunkSize = chunkingConfig.Semantic.MinChunkSize,
+                    TitleLevelThreshold = chunkingConfig.Semantic.TitleLevelThreshold,
+                    IncludeTitleContext = chunkingConfig.Semantic.IncludeTitleContext
                 })
                 .WithEmbeddingsGeneration<GenerateEmbeddingsHandler>()
                 .WithSaveRecords<SaveRecordsHandler>();
@@ -342,7 +565,7 @@ The conclusion ties together all the concepts discussed in the previous sections
             };
             
             // Execute the pipeline
-            var pipeline = orchestrator.PrepareNewDocumentUpload(index: "docs", request, context: new NoopContext());
+            var pipeline = orchestrator.PrepareNewDocumentUpload(index: pipelineConfig.DefaultIndex, request, context: new NoopContext());
             await orchestrator.RunPipelineAsync(pipeline, ct);
             return (pipeline.DocumentId, pipeline.Logs);
         }

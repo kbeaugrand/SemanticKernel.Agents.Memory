@@ -48,5 +48,9 @@ $RECYCLE.BIN/
 ScaffoldingReadMe.txt
 # Dotnet CLI
 project.lock.json
+
+# Configuration files with secrets
+appsettings.local.json
+appsettings.secrets.json
 project.fragment.lock.json
 artifacts/
