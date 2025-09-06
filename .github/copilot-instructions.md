@@ -5,37 +5,43 @@
 
 # Copilot instructions for SemanticKernel.Agents.Memory
 
-Quick intent: help contributors and AI agents be productive here — understand the pipeline architecture, common DI patterns, where to change behavior, and how to run samples.
+Quick intent: help contributors and AI agents be productive here — understand the pipeline architecture, fluent DI patterns, where to change behavior, and how to run samples.
 
 - Big picture
   - This repo implements a memory ingestion pipeline for Semantic Kernel agents. Core pieces live under `src/*Core` and `src/*Abstractions`.
   - The orchestrator pipeline composes small handlers: TextExtraction -> Chunking -> Embeddings -> Save. See `ImportOrchestrator`, handlers in `src/SemanticKernel.Agents.Memory.Core/Handlers`, and models in `src/SemanticKernel.Agents.Memory.Abstractions`.
-  - DI-first design: prefer wiring via `services.ConfigureMemoryIngestion(...)` in `src/.../Extensions/ServiceCollectionExtensions.cs` rather than instantiating handlers manually.
+  - DI-first design: prefer fluent configuration via `services.ConfigureMemoryIngestion(options => {...})` in `ServiceCollectionExtensions.cs` rather than instantiating handlers manually.
+  - Multi-layered architecture: Abstractions (interfaces/models) -> Core (orchestration/handlers) -> Samples/Plugin/Service/MCP (higher-level integrations).
 
 - Key files to reference when changing behavior
-  - `src/SemanticKernel.Agents.Memory.Core/ImportOrchestrator.cs` (pipeline orchestration)
-  - `src/SemanticKernel.Agents.Memory.Core/Handlers/*` (individual handler implementations: `TextExtractionHandler`, `SimpleTextChunking`, `SemanticChunking`, `GenerateEmbeddingsHandler`, `SaveRecordsHandler`)
-  - `src/SemanticKernel.Agents.Memory.Abstractions/*` (models and interfaces: `Document`, `Chunk`, `ISearchClient`)
-  - `samples/SemanticKernel.Agents.Memory.Samples/Program.cs` and `PipelineDemo.cs` (sample wiring and runnable entrypoint)
-  - `services/markitdown-service/app.py` — external helper service used for document extraction (default URL: http://localhost:5000)
+  - `src/SemanticKernel.Agents.Memory.Core/ImportOrchestrator.cs` (pipeline orchestration with DI handler resolution)
+  - `src/SemanticKernel.Agents.Memory.Core/MemoryIngestionOptions.cs` (fluent configuration API with `WithSemanticChunking()`, `WithDefaultEmbeddingsGeneration()`)
+  - `src/SemanticKernel.Agents.Memory.Core/Handlers/*` (5 core handlers: `TextExtractionHandler`, `SimpleTextChunking`, `SemanticChunking`, `GenerateEmbeddingsHandler`, `SaveRecordsHandler`)
+  - `src/SemanticKernel.Agents.Memory.Abstractions/*` (shared models: `Document`, `Chunk`, `ISearchClient`, `SearchResult`, `Answer`)
+  - `samples/SemanticKernel.Agents.Memory.Samples/PipelineDemo.cs` (complete fluent API examples with multiple chunking strategies)
+  - `services/markitdown-service/app.py` — external Flask service for document extraction (default: http://localhost:5000)
 
 - Project-specific conventions
-  - Handlers follow a small-step pattern: each transforms the pipeline state and passes it on. Keep handlers small, pure, and testable.
-  - Configuration precedence in samples: User Secrets -> Environment -> appsettings.{Env}.json -> appsettings.json. See samples README and `Program.cs`.
-  - Embedding generator abstraction: code falls back to `MockEmbeddingGenerator` when Azure OpenAI config is missing — tests and samples rely on this deterministic fallback.
+  - Pipeline handlers follow strict single-responsibility: each transforms `DataPipelineResult` state and passes to next handler. Keep handlers stateless and testable.
+  - Fluent configuration pattern: `options.WithMarkitDownTextExtraction(url).WithSemanticChunking(() => new SemanticChunkingOptions {...}).WithDefaultEmbeddingsGeneration().WithSaveRecords(vectorStore)`
+  - Configuration precedence in samples: User Secrets -> Environment -> appsettings.{Env}.json -> appsettings.json. Use `dotnet user-secrets set` for local Azure OpenAI keys.
+  - Embedding fallback: MockEmbeddingGenerator activates when Azure OpenAI config missing — essential for tests and local demos.
 
 - Common developer workflows
-  - Build & run samples: `cd samples/SemanticKernel.Agents.Memory.Samples && dotnet run` (requires .NET 8+). The app uses configuration and may prompt for user input when run interactively.
-  - To test embedding integration locally, either set Azure OpenAI settings via user-secrets or env vars (see samples/README) or rely on the mock generator.
-  - The MarkitDown extraction service is a small Flask app in `services/markitdown-service` and listens on `http://localhost:5000` by default for richer extraction.
+  - Build & run samples: `cd samples/SemanticKernel.Agents.Memory.Samples && dotnet run` (requires .NET 8+). Interactive menu with 5 demo modes.
+  - Start MarkitDown service: `python services/markitdown-service/app.py` or `docker-compose up markitdown-service` 
+  - Configure Azure OpenAI: `dotnet user-secrets set "AzureOpenAI:Endpoint" "https://your-resource.openai.azure.com/"` (see samples/README)
+  - Solution structure: No tests directory exists yet — handlers are tested via sample integration demos.
 
 - Editing tips for AI patches
-  - When adding new handlers: implement the handler in `Core/Handlers`, add any models to `Abstractions` only if shared, and register via `ConfigureMemoryIngestion` or tests by creating `ImportOrchestrator` directly.
-  - Prefer altering options objects (e.g., `TextChunkingOptions`, `SemanticChunkingOptions`) for behavior changes rather than hard-coding values.
-  - Keep public APIs stable: new overloads for `ConfigureMemoryIngestion` are preferred over breaking changes.
+  - Adding new handlers: implement in `Core/Handlers`, extend `MemoryIngestionOptions` with `With{HandlerName}()` method, register via handler options pattern
+  - Chunking strategies: extend `TextChunkingOptions` or `SemanticChunkingOptions` for behavior changes rather than hard-coding values  
+  - Pipeline steps: handlers registered by step name ("text-extraction", "text-chunking", "generate-embeddings", "save-records") — order matters
+  - Keep backwards compatibility: new overloads for fluent methods preferred over breaking changes to `ConfigureMemoryIngestion`
 
-- Examples (short snippets / pointers)
-  - Registering DI pipeline: see `samples/.../Program.cs` and `ServiceCollectionExtensions.cs` for `WithSemanticChunking()` and `WithEmbeddingsGeneration<GenerateEmbeddingsHandler>()` usage.
-  - Pipeline flow: `ImportOrchestrator.PrepareNewDocumentUpload(...)` -> `RunPipelineAsync(...)` — inspect logs for each handler stage.
+- Examples (concrete patterns from codebase)
+  - Fluent registration: `options.WithSemanticChunking(() => new SemanticChunkingOptions { MaxChunkSize = 500, TitleLevelThreshold = 3 })`
+  - Pipeline execution: `orchestrator.NewDocumentUpload().WithFile(path).WithTag("type", "pdf").Build()` -> `PrepareNewDocumentUpload()` -> `RunPipelineAsync()`
+  - Service resolution: `ImportOrchestrator` resolves handlers from DI container at runtime using `HandlerRegistration.HandlerType`
 
-If anything here is unclear or you want more examples (unit tests, debugging recipes, or a checklist for adding handlers), tell me which area to expand. 
+If anything here is unclear or you want more examples (debugging recipes, adding vector stores, or extending chunking strategies), tell me which area to expand. 
