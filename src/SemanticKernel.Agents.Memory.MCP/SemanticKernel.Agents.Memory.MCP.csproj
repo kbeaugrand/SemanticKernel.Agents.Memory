@@ -15,4 +15,8 @@
     <RepositoryUrl>https://github.com/kbeaugrand/SemanticKernel.Agents.Memory</RepositoryUrl>
 
   </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SemanticKernel.Agents.Memory.Abstractions\SemanticKernel.Agents.Memory.Abstractions.csproj" />
+  </ItemGroup>
 </Project>

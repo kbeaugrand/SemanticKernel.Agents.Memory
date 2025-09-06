@@ -187,5 +187,4 @@ public sealed class SaveRecordsHandler<TVectorStore> : IPipelineStepHandler
             }
         };
     }
-
 }
