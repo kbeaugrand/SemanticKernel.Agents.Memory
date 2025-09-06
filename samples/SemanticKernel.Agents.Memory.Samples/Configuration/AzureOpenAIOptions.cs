@@ -23,6 +23,11 @@ public class AzureOpenAIOptions
     public string EmbeddingModel { get; set; } = "text-embedding-ada-002";
 
     /// <summary>
+    /// The chat completion model deployment name.
+    /// </summary>
+    public string CompletionModel { get; set; } = "gpt-4.1-mini";
+
+    /// <summary>
     /// Validates that the configuration is properly set.
     /// </summary>
     /// <returns>True if configuration is valid, false otherwise.</returns>
@@ -31,6 +36,7 @@ public class AzureOpenAIOptions
         return !string.IsNullOrWhiteSpace(Endpoint) &&
                !string.IsNullOrWhiteSpace(ApiKey) &&
                !string.IsNullOrWhiteSpace(EmbeddingModel) &&
+               !string.IsNullOrWhiteSpace(CompletionModel) &&
                !Endpoint.Contains("your-resource-name") &&
                !ApiKey.StartsWith("your-");
     }
