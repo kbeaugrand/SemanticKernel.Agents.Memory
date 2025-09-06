@@ -25,4 +25,11 @@
     <PackageReference Include="System.Text.Json" Version="8.0.5" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\SemanticKernel.Agents.Memory.Abstractions\SemanticKernel.Agents.Memory.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Prompts\*.prompt" />
+  </ItemGroup>
 </Project>

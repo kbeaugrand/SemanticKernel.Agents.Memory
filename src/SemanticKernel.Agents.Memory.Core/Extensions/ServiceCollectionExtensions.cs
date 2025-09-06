@@ -1,4 +1,5 @@
 using System;
+using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SemanticKernel.Agents.Memory.Core.Handlers;
@@ -147,4 +148,92 @@ public static class ServiceCollectionExtensions
 
         return services;
     }
+
+    /// <summary>
+    /// Adds memory search client with a specific vector store type
+    /// </summary>
+    /// <typeparam name="TVectorStore">The type of vector store</typeparam>
+    /// <param name="services">Service collection</param>
+    /// <returns>Service collection for chaining</returns>
+    public static IServiceCollection AddMemorySearchClient<TVectorStore>(this IServiceCollection services)
+        where TVectorStore : Microsoft.Extensions.VectorData.VectorStore
+    {
+        services.AddScoped<SearchClient<TVectorStore>>();
+        services.AddScoped<SemanticKernel.Agents.Memory.ISearchClient>(provider =>
+            provider.GetRequiredService<SearchClient<TVectorStore>>());
+
+        return services;
+    }
+
+    /// <summary>
+    /// Adds embedded prompt provider to the dependency injection container
+    /// </summary>
+    /// <param name="services">Service collection</param>
+    /// <param name="assembly">Assembly containing embedded prompt resources (defaults to Core assembly)</param>
+    /// <param name="resourcePrefix">Prefix for embedded resource names (defaults to Core prompts namespace)</param>
+    /// <returns>Service collection for chaining</returns>
+    public static IServiceCollection AddEmbeddedPromptProvider(
+        this IServiceCollection services,
+        Assembly? assembly = null,
+        string? resourcePrefix = null)
+    {
+        services.AddScoped<IPromptProvider>(serviceProvider =>
+        {
+            var logger = serviceProvider.GetRequiredService<ILogger<EmbeddedPromptProvider>>();
+            return new EmbeddedPromptProvider(logger, assembly, resourcePrefix);
+        });
+
+        return services;
+    }
+
+    /// <summary>
+    /// Adds embedded prompt provider with custom configuration
+    /// </summary>
+    /// <param name="services">Service collection</param>
+    /// <param name="configure">Action to configure the embedded prompt provider</param>
+    /// <returns>Service collection for chaining</returns>
+    public static IServiceCollection AddEmbeddedPromptProvider(
+        this IServiceCollection services,
+        Action<EmbeddedPromptProviderOptions> configure)
+    {
+        if (configure == null)
+            throw new ArgumentNullException(nameof(configure));
+
+        var options = new EmbeddedPromptProviderOptions();
+        configure(options);
+
+        services.AddScoped<IPromptProvider>(serviceProvider =>
+        {
+            var logger = serviceProvider.GetRequiredService<ILogger<EmbeddedPromptProvider>>();
+            return new EmbeddedPromptProvider(logger, options.Assembly, options.ResourcePrefix);
+        });
+
+        return services;
+    }
+
+    /// <summary>
+    /// Adds default prompt provider with embedded prompts from the Core assembly
+    /// </summary>
+    /// <param name="services">Service collection</param>
+    /// <returns>Service collection for chaining</returns>
+    public static IServiceCollection AddDefaultPromptProvider(this IServiceCollection services)
+    {
+        return services.AddEmbeddedPromptProvider();
+    }
+}
+
+/// <summary>
+/// Configuration options for EmbeddedPromptProvider
+/// </summary>
+public class EmbeddedPromptProviderOptions
+{
+    /// <summary>
+    /// Assembly containing embedded prompt resources
+    /// </summary>
+    public Assembly? Assembly { get; set; }
+
+    /// <summary>
+    /// Prefix for embedded resource names
+    /// </summary>
+    public string? ResourcePrefix { get; set; }
 }
