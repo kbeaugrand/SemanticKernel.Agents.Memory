@@ -22,11 +22,11 @@ class Program
         var configuration = BuildConfiguration();
         
         Console.WriteLine("Available demos:");
-        Console.WriteLine("1. Basic Pipeline Demo (includes fluent API examples)");
+        Console.WriteLine("1. Basic Pipeline Demo");
         Console.WriteLine("2. Semantic Chunking Demo");
         Console.WriteLine("3. Custom Configuration Demo");
         Console.WriteLine("4. Semantic Chunking with Custom Options");
-        Console.WriteLine("5. Embedded Prompt Provider Demo");
+        Console.WriteLine("5. Complete Flow Demo (Ingestion + Q&A)");
         Console.WriteLine();
         
         // Get user choice
@@ -49,7 +49,7 @@ class Program
                     await RunSemanticChunkingConfigDemo(configuration);
                     break;
                 case 5:
-                    await RunEmbeddedPromptProviderDemo(configuration);
+                    await CompleteFlowDemo.RunAsync(configuration);
                     break;
                 default:
                     Console.WriteLine("Invalid choice. Running basic demo...");
@@ -207,79 +207,5 @@ class Program
         {
             Console.WriteLine($"[{log.Time:HH:mm:ss}] {log.Source}: {log.Text}");
         }
-    }
-
-    static async Task RunEmbeddedPromptProviderDemo(IConfiguration configuration)
-    {
-        Console.WriteLine("\n=== Running Embedded Prompt Provider Demo ===");
-        Console.WriteLine();
-        Console.WriteLine("This demo shows how to use the EmbeddedPromptProvider to load prompts from embedded resources.");
-        Console.WriteLine();
-        
-        // Create a service collection and configure logging
-        var services = new ServiceCollection();
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Information));
-        
-        // Add the embedded prompt provider
-        services.AddEmbeddedPromptProvider();
-        
-        // Build the service provider
-        using var serviceProvider = services.BuildServiceProvider();
-        var promptProvider = serviceProvider.GetRequiredService<IPromptProvider>();
-        
-        try
-        {
-            Console.WriteLine("Loading embedded prompts...");
-            Console.WriteLine();
-            
-            // Test retrieving different prompts
-            var promptNames = new[] { "ChunkSummarization", "SemanticChunking", "QueryExpansion" };
-            
-            foreach (var promptName in promptNames)
-            {
-                try
-                {
-                    Console.WriteLine($"Loading prompt: {promptName}");
-                    var prompt = promptProvider.ReadPrompt(promptName);
-                    Console.WriteLine($"✓ Successfully loaded prompt '{promptName}' ({prompt.Length} characters)");
-                    Console.WriteLine($"Preview: {prompt.Substring(0, Math.Min(100, prompt.Length))}...");
-                    Console.WriteLine();
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"✗ Failed to load prompt '{promptName}': {ex.Message}");
-                    Console.WriteLine();
-                }
-            }
-            
-            // Test additional functionality if the provider supports it
-            if (promptProvider is SemanticKernel.Agents.Memory.Core.Services.EmbeddedPromptProvider embeddedProvider)
-            {
-                Console.WriteLine("Available prompts:");
-                var availablePrompts = embeddedProvider.GetAvailablePrompts();
-                foreach (var prompt in availablePrompts)
-                {
-                    Console.WriteLine($"  - {prompt}");
-                }
-                Console.WriteLine();
-                
-                // Test existence check
-                Console.WriteLine("Testing prompt existence:");
-                Console.WriteLine($"  'ChunkSummarization' exists: {embeddedProvider.PromptExists("ChunkSummarization")}");
-                Console.WriteLine($"  'NonExistentPrompt' exists: {embeddedProvider.PromptExists("NonExistentPrompt")}");
-            }
-            
-            Console.WriteLine("Embedded Prompt Provider demo completed successfully!");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error during prompt provider demo: {ex.Message}");
-            if (ex.InnerException != null)
-            {
-                Console.WriteLine($"Inner exception: {ex.InnerException.Message}");
-            }
-        }
-        
-        await Task.CompletedTask; // Maintain async signature for consistency
     }
 }

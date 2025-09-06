@@ -10,6 +10,7 @@ using SemanticKernel.Agents.Memory.Core.Models;
 using Microsoft.Extensions.VectorData;
 using Microsoft.Extensions.AI;
 using Microsoft.SemanticKernel.ChatCompletion;
+using Microsoft.SemanticKernel;
 
 namespace SemanticKernel.Agents.Memory.Core.Services;
 
@@ -49,9 +50,9 @@ public class SearchClient<TVectorStore> : ISearchClient
         try
         {
             // Generate embedding for the query
-            var queryEmbedding = await _embeddingGenerator.GenerateAsync([query], cancellationToken: cancellationToken);
+            var queryEmbedding = await _embeddingGenerator.GenerateAsync([query], cancellationToken: cancellationToken).ConfigureAwait(false);
             var embedding = queryEmbedding.FirstOrDefault();
-            
+
             if (embedding == null)
             {
                 return new SearchResult { Query = query, Results = new List<Citation>() };
@@ -59,7 +60,7 @@ public class SearchClient<TVectorStore> : ISearchClient
 
             var collection = _vectorStore.GetCollection<string, MemoryRecord>(index, GetMemoryRecordStoreDefinition(embedding.Dimensions));
 
-            await collection.EnsureCollectionExistsAsync(cancellationToken);
+            await collection.EnsureCollectionExistsAsync(cancellationToken).ConfigureAwait(false);
 
             // Determine the search limit - use provided limit or default to 10
             var searchLimit = limit > 0 ? limit : 10;
@@ -68,11 +69,11 @@ public class SearchClient<TVectorStore> : ISearchClient
             {
                 Filter = MapFiltersToVectorStoreFilter(filters)
             });
-            
+
             var citations = new List<Citation>();
-            
+
             // Process search results and convert to Citations
-            await foreach (var result in searchResult.WithCancellation(cancellationToken))
+            await foreach (var result in searchResult.WithCancellation(cancellationToken).ConfigureAwait(false))
             {
                 // Apply relevance filter
                 var score = result.Score ?? 0.0;
@@ -91,7 +92,7 @@ public class SearchClient<TVectorStore> : ISearchClient
 
                 citations.Add(citation);
             }
-            
+
             return new SearchResult
             {
                 Query = query,
@@ -116,9 +117,25 @@ public class SearchClient<TVectorStore> : ISearchClient
         double minRelevance = 0,
         CancellationToken cancellationToken = default)
     {
-        // Call AskStreamingAsync and return the first (and only) result
-        await foreach (var answer in AskStreamingAsync(index, question, filters, minRelevance, cancellationToken))
+        Answer answer = null!;
+        IEnumerable<SourceReference> sourceReferences = [];
+
+        // Call AskStreamingAsync and return the last result only once the streaming is complete.
+        await foreach (var answerChunk in AskStreamingAsync(index, question, filters, minRelevance, cancellationToken))
         {
+            if (answer is null)
+            {
+                // Capture source references from the first chunk that has them
+                sourceReferences = answerChunk.RelevantSources;
+            }
+
+            answer = answerChunk;
+        }
+
+        if (answer is not null)
+        {
+            // Ensure the final answer includes all relevant sources
+            answer.RelevantSources.AddRange(sourceReferences);
             return answer;
         }
 
@@ -145,10 +162,10 @@ public class SearchClient<TVectorStore> : ISearchClient
         // Search for relevant content
         SearchResult? searchResult = null;
         string? errorMessage = null;
-        
+
         try
         {
-            searchResult = await SearchAsync(index, question, filters, minRelevance, 5, cancellationToken);
+            searchResult = await SearchAsync(index, question, filters, minRelevance, 5, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -166,7 +183,7 @@ public class SearchClient<TVectorStore> : ISearchClient
             };
             yield break;
         }
-        
+
         if (searchResult!.NoResult)
         {
             yield return new Answer
@@ -179,14 +196,37 @@ public class SearchClient<TVectorStore> : ISearchClient
             yield break;
         }
 
-        // Build context from search results
-        var facts = string.Join("\n\n", searchResult.Results.Select(r => 
-            $"Source: {r.Source}\nContent: {r.Content}"));
-        
+        // Build context from search results 
+        var factsBuilder = new System.Text.StringBuilder();
+        var citationCount = 0;
+        foreach (var result in searchResult.Results)
+        {
+            if (citationCount > 0)
+                factsBuilder.Append("\n\n");
+            factsBuilder.Append($"Source: {result.Source}\nContent: {result.Content}");
+            citationCount++;
+        }
+        var facts = factsBuilder.ToString();
+
+        // Pre-build relevant sources list
+        var relevantSources = searchResult.Results.Select(r => new SourceReference
+        {
+            DocumentId = r.Id,
+            SourceName = r.Source,
+            Chunks = new List<Chunk>
+            {
+                new Chunk
+                {
+                    Text = r.Content,
+                    Relevance = (float)r.RelevanceScore
+                }
+            }
+        }).ToList();
+
         // Get the prompt template and build the prompt
         string? prompt = null;
         var notFoundMessage = "I don't have sufficient information to answer this question based on the available facts.";
-        
+
         try
         {
             var promptTemplate = _promptProvider.ReadPrompt("AskWithFacts");
@@ -218,36 +258,29 @@ public class SearchClient<TVectorStore> : ISearchClient
 
         // Track token usage and accumulate response
         var tokenUsageList = new List<TokenUsage>();
-        var responseText = string.Empty;
+        var responseBuilder = new System.Text.StringBuilder();
         var isFirstChunk = true;
-        
+        var chunkCount = 0;
+
         // Generate response using chat completion service and stream results
         await foreach (var chunk in _chatCompletionService.GetStreamingChatMessageContentsAsync(
-            chatHistory, 
-            cancellationToken: cancellationToken).ConfigureAwait(false))
+            chatHistory,
+            cancellationToken: cancellationToken)
+            .ConfigureAwait(false))
         {
+            chunkCount++;
+
             if (chunk.Content != null)
             {
-                responseText += chunk.Content;
-                
+                responseBuilder.Append(chunk.Content);
+                var responseText = responseBuilder.ToString();
+
                 // For streaming, yield partial results as they come in
-                var hasResult = !string.IsNullOrWhiteSpace(responseText) && 
+                var hasResult = !string.IsNullOrWhiteSpace(responseText) &&
                                !responseText.Trim().Equals(notFoundMessage, StringComparison.OrdinalIgnoreCase);
 
-                // Create relevant sources list (only include in first chunk to avoid duplication)
-                var relevantSources = isFirstChunk ? searchResult.Results.Select(r => new SourceReference
-                {
-                    DocumentId = r.Id,
-                    SourceName = r.Source,
-                    Chunks = new List<Chunk>
-                    {
-                        new Chunk
-                        {
-                            Text = r.Content,
-                            Relevance = (float)r.RelevanceScore
-                        }
-                    }
-                }).ToList() : new List<SourceReference>();
+                // Include relevant sources only in first chunk to avoid duplication
+                var sourcesToInclude = isFirstChunk ? relevantSources : new List<SourceReference>();
 
                 yield return new Answer
                 {
@@ -255,12 +288,12 @@ public class SearchClient<TVectorStore> : ISearchClient
                     HasResult = hasResult,
                     Result = responseText,
                     TokenUsage = tokenUsageList.Count > 0 ? new List<TokenUsage>(tokenUsageList) : null,
-                    RelevantSources = relevantSources
+                    RelevantSources = sourcesToInclude
                 };
 
                 isFirstChunk = false;
             }
-            
+
             // Track token usage if available
             if (chunk.Metadata?.TryGetValue("Usage", out var usage) == true && usage != null)
             {
@@ -275,28 +308,17 @@ public class SearchClient<TVectorStore> : ISearchClient
         // If no content was streamed, yield a final result
         if (isFirstChunk)
         {
-            var hasResult = !string.IsNullOrWhiteSpace(responseText) && 
+            var responseText = responseBuilder.ToString();
+            var hasResult = !string.IsNullOrWhiteSpace(responseText) &&
                            !responseText.Trim().Equals(notFoundMessage, StringComparison.OrdinalIgnoreCase);
 
             yield return new Answer
             {
                 Question = question,
                 HasResult = hasResult,
-                Result = responseText,
+                Result = string.IsNullOrEmpty(responseText) ? "No response received from chat completion service." : responseText,
                 TokenUsage = tokenUsageList.Count > 0 ? tokenUsageList : null,
-                RelevantSources = searchResult.Results.Select(r => new SourceReference
-                {
-                    DocumentId = r.Id,
-                    SourceName = r.Source,
-                    Chunks = new List<Chunk>
-                    {
-                        new Chunk
-                        {
-                            Text = r.Content,
-                            Relevance = (float)r.RelevanceScore
-                        }
-                    }
-                }).ToList()
+                RelevantSources = relevantSources
             };
         }
     }
@@ -313,10 +335,10 @@ public class SearchClient<TVectorStore> : ISearchClient
         {
             // Try to handle as a generic object with reflection for different usage types
             var usageType = usage.GetType();
-            var inputTokensProperty = usageType.GetProperty("InputTokens") ?? 
+            var inputTokensProperty = usageType.GetProperty("InputTokens") ??
                                      usageType.GetProperty("PromptTokens") ??
                                      usageType.GetProperty("InputTokenCount");
-            var outputTokensProperty = usageType.GetProperty("OutputTokens") ?? 
+            var outputTokensProperty = usageType.GetProperty("OutputTokens") ??
                                       usageType.GetProperty("CompletionTokens") ??
                                       usageType.GetProperty("OutputTokenCount");
             var totalTokensProperty = usageType.GetProperty("TotalTokens") ??
@@ -347,7 +369,7 @@ public class SearchClient<TVectorStore> : ISearchClient
         {
             // Get collection names from the vector store
             var collectionNames = new List<string>();
-            await foreach (var name in _vectorStore.ListCollectionNamesAsync(cancellationToken))
+            await foreach (var name in _vectorStore.ListCollectionNamesAsync(cancellationToken).ConfigureAwait(false))
             {
                 collectionNames.Add(name);
             }
@@ -457,14 +479,14 @@ public class SearchClient<TVectorStore> : ISearchClient
 
             if (condition != null)
             {
-                combinedExpression = combinedExpression == null 
-                    ? condition 
+                combinedExpression = combinedExpression == null
+                    ? condition
                     : Expression.AndAlso(combinedExpression, condition);
             }
         }
 
-        return combinedExpression == null 
-            ? null 
+        return combinedExpression == null
+            ? null
             : Expression.Lambda<Func<MemoryRecord, bool>>(combinedExpression, parameter);
     }
 }

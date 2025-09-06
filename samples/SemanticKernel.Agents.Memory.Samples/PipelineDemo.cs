@@ -19,6 +19,7 @@ using SemanticKernel.Agents.Memory.Core.Handlers;
 using SemanticKernel.Agents.Memory.Samples.Configuration;
 using Microsoft.SemanticKernel.Connectors.InMemory;
 using Azure.Identity;
+using Azure.Core;
 
 namespace SemanticKernel.Agents.Memory.Samples;
 
@@ -340,7 +341,7 @@ Final thoughts and summary of the document content."),
             try
             {
                 // Create Azure OpenAI client
-                var azureOpenAIClient = new AzureOpenAIClient(new Uri(azureOpenAIOptions.Endpoint), new DefaultAzureCredential());
+                var azureOpenAIClient = new AzureOpenAIClient(new Uri(azureOpenAIOptions.Endpoint), new AzureKeyCredential(azureOpenAIOptions.ApiKey));
 
                 // Get embedding generator
                 var embeddingGenerator = azureOpenAIClient.GetEmbeddingClient(azureOpenAIOptions.EmbeddingModel)
