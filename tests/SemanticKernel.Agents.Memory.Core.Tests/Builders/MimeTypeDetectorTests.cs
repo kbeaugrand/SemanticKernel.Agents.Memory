@@ -56,7 +56,7 @@ public class MimeTypeDetectorTests
         var detector = new MimeTypeDetector();
 
         // Act
-        var result = detector.GetMimeType(fileName);
+        var result = detector.GetMimeType(fileName!);
 
         // Assert
         result.Should().Be("application/octet-stream");
