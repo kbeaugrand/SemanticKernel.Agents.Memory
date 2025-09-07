@@ -49,7 +49,7 @@ jobs:
       run: dotnet test SemanticKernel.Agents.Memory.sln --no-build --configuration Release --verbosity normal --logger trx --results-directory TestResults
 
     - name: Upload test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: test-results-${{ matrix.os }}
@@ -87,7 +87,7 @@ jobs:
       run: reportgenerator -reports:"coverage/**/coverage.cobertura.xml" -targetdir:"coveragereport" -reporttypes:Html
 
     - name: Upload coverage report
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: coverage-report
         path: coveragereport/
@@ -141,7 +141,7 @@ jobs:
       run: dotnet pack SemanticKernel.Agents.Memory.sln --configuration Release --output ./nupkgs
 
     - name: Upload packages
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: nuget-packages
         path: ./nupkgs/*.nupkg
