@@ -51,8 +51,18 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore
       working-directory: ./
+
+    - name: Extract numeric version
+      id: extract_version
+      run: |
+        # Extract numeric version from tag (e.g., "0.0.1-beta02" -> "0.0.1.0")
+        NUMERIC_VERSION=$(echo "${{ github.event.release.tag_name }}" | sed 's/-.*$//' | sed 's/$/\.0/')
+        echo "numeric_version=$NUMERIC_VERSION" >> $GITHUB_OUTPUT
+        echo "Full version: ${{ github.event.release.tag_name }}"
+        echo "Numeric version: $NUMERIC_VERSION"
+
     - name: Build
-      run: dotnet build --no-restore --configuration Release /p:Version=${{ github.event.release.tag_name }} /p:PackageVersion=${{ github.event.release.tag_name }} /p:AssemblyVersion=${{ github.event.release.tag_name }} /p:FileVersion=${{ github.event.release.tag_name }}
+      run: dotnet build --no-restore --configuration Release /p:Version=${{ github.event.release.tag_name }} /p:PackageVersion=${{ github.event.release.tag_name }} /p:AssemblyVersion=${{ steps.extract_version.outputs.numeric_version }} /p:FileVersion=${{ steps.extract_version.outputs.numeric_version }}
       working-directory: ./
       env:
         PackageCertificatePassword: ${{ secrets.PACKAGE_SIGNING_CERT_PASSWORD }}
