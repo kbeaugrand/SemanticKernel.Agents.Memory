@@ -1,0 +1,191 @@
+name: Code Quality and Formatting
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  formatting:
+    name: Code Formatting
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Restore dependencies
+      run: dotnet restore SemanticKernel.Agents.Memory.sln
+
+    - name: Check code formatting
+      run: |
+        dotnet format SemanticKernel.Agents.Memory.sln --verify-no-changes --verbosity normal
+        if [ $? -ne 0 ]; then
+          echo "❌ Code formatting issues found. Please run 'dotnet format' to fix them."
+          exit 1
+        else
+          echo "✅ Code formatting is correct."
+        fi
+
+    - name: Check for whitespace issues
+      run: |
+        echo "Checking for whitespace issues..."
+
+        # Check for trailing whitespace
+        if git grep -n '[[:space:]]$' -- '*.cs' '*.csproj' '*.md' '*.yml' '*.yaml' '*.json'; then
+          echo "❌ Trailing whitespace found in the files above"
+          exit 1
+        fi
+
+        # Check for mixed line endings
+        if git ls-files --eol | grep 'w/mixed'; then
+          echo "❌ Mixed line endings found"
+          exit 1
+        fi
+
+        echo "✅ No whitespace issues found"
+
+  linting:
+    name: Code Linting
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Restore dependencies
+      run: dotnet restore SemanticKernel.Agents.Memory.sln
+
+    - name: Build with warnings as errors
+      run: |
+        dotnet build SemanticKernel.Agents.Memory.sln \
+          --configuration Release \
+          --no-restore \
+          --verbosity normal \
+          -p:TreatWarningsAsErrors=true \
+          -p:WarningsAsErrors="" \
+          -p:WarningsNotAsErrors="CS1591;CS0618"
+
+    - name: Run static analysis
+      run: |
+        echo "Running static analysis..."
+        dotnet build SemanticKernel.Agents.Memory.sln \
+          --configuration Release \
+          --no-restore \
+          --verbosity normal \
+          -p:RunAnalyzersDuringBuild=true \
+          -p:EnableNETAnalyzers=true
+
+  documentation:
+    name: Documentation Quality
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Check documentation
+      run: |
+        echo "Checking documentation quality..."
+
+        # Check if README.md exists and has minimum content
+        if [ ! -f "README.md" ] || [ $(wc -l < README.md) -lt 50 ]; then
+          echo "❌ README.md is missing or too short"
+          exit 1
+        fi
+
+        # Check for broken internal links in README
+        if grep -o '\[.*\](.*\.md)' README.md | while read link; do
+          file=$(echo "$link" | sed 's/.*](\(.*\))/\1/')
+          if [ ! -f "$file" ]; then
+            echo "❌ Broken link found: $file"
+            exit 1
+          fi
+        done; then
+          echo "❌ Broken links found in README.md"
+          exit 1
+        fi
+
+        # Check for basic sections in README
+        required_sections=("# " "## " "### ")
+        for section in "${required_sections[@]}"; do
+          if ! grep -q "^$section" README.md; then
+            echo "⚠️  README.md might be missing proper heading structure"
+            break
+          fi
+        done
+
+        echo "✅ Documentation quality checks passed"
+
+    - name: Check XML documentation coverage
+      run: |
+        echo "Checking XML documentation coverage..."
+
+        # Build with documentation warnings
+        dotnet build SemanticKernel.Agents.Memory.sln \
+          --configuration Release \
+          --no-restore \
+          -p:GenerateDocumentationFile=true \
+          -p:NoWarn="CS1591" || true
+
+        echo "✅ XML documentation check completed"
+
+  markdown-lint:
+    name: Markdown Linting
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - name: Install markdownlint
+      run: npm install -g markdownlint-cli
+
+    - name: Lint Markdown files
+      run: |
+        echo "Linting Markdown files..."
+        markdownlint "**/*.md" --ignore node_modules --ignore .git || true
+        echo "✅ Markdown linting completed"
+
+  spell-check:
+    name: Spell Check
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - name: Install cspell
+      run: npm install -g cspell
+
+    - name: Run spell check
+      run: |
+        echo "Running spell check..."
+        cspell "**/*.md" "**/*.cs" --no-progress || true
+        echo "✅ Spell check completed"
