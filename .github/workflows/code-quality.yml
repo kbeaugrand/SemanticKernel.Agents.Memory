@@ -80,7 +80,7 @@ jobs:
           --verbosity normal \
           -p:TreatWarningsAsErrors=true \
           -p:WarningsAsErrors="" \
-          -p:WarningsNotAsErrors="CS1591;CS0618"
+          -p:NoWarn="CS1591;CS0618"
 
     - name: Run static analysis
       run: |
