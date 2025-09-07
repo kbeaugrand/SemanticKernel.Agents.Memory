@@ -150,30 +150,37 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Adds memory search client with a specific vector store type
+    /// Adds memory search client with a specific vector store instance
     /// </summary>
     /// <typeparam name="TVectorStore">The type of vector store</typeparam>
     /// <param name="services">Service collection</param>
+    /// <param name="vectorStore">The vector store instance to use</param>
     /// <returns>Service collection for chaining</returns>
-    public static IServiceCollection AddMemorySearchClient<TVectorStore>(this IServiceCollection services)
+    public static IServiceCollection AddMemorySearchClient<TVectorStore>(this IServiceCollection services, TVectorStore vectorStore)
         where TVectorStore : Microsoft.Extensions.VectorData.VectorStore
     {
-        return AddMemorySearchClient<TVectorStore>(services, null);
+        return AddMemorySearchClient(services, vectorStore, null);
     }
 
     /// <summary>
-    /// Adds memory search client with a specific vector store type and options
+    /// Adds memory search client with a specific vector store instance and options
     /// </summary>
     /// <typeparam name="TVectorStore">The type of vector store</typeparam>
     /// <param name="services">Service collection</param>
+    /// <param name="vectorStore">The vector store instance to use</param>
     /// <param name="options">Search client options</param>
     /// <returns>Service collection for chaining</returns>
-    public static IServiceCollection AddMemorySearchClient<TVectorStore>(this IServiceCollection services, SearchClientOptions? options)
+    public static IServiceCollection AddMemorySearchClient<TVectorStore>(this IServiceCollection services, TVectorStore vectorStore, SearchClientOptions? options)
         where TVectorStore : Microsoft.Extensions.VectorData.VectorStore
     {
+        if (vectorStore == null)
+            throw new ArgumentNullException(nameof(vectorStore));
+
+        // Register the vector store instance
+        services.AddSingleton(vectorStore);
+
         services.AddScoped<SearchClient<TVectorStore>>(provider =>
         {
-            var vectorStore = provider.GetRequiredService<TVectorStore>();
             var embeddingGenerator = provider.GetRequiredService<Microsoft.Extensions.AI.IEmbeddingGenerator<string, Microsoft.Extensions.AI.Embedding<float>>>();
             var promptProvider = provider.GetRequiredService<IPromptProvider>();
             var chatCompletionService = provider.GetRequiredService<Microsoft.SemanticKernel.ChatCompletion.IChatCompletionService>();

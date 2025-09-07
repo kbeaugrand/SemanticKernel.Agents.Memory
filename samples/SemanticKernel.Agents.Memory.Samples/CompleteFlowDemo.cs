@@ -146,7 +146,7 @@ public static class CompleteFlowDemo
         });
 
         // Add SearchClient
-        services.AddMemorySearchClient<InMemoryVectorStore>();
+        services.AddMemorySearchClient(vectorStore);
     }
 
     /// <summary>
