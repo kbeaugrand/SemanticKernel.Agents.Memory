@@ -84,7 +84,7 @@ public sealed class SaveRecordsHandler<TVectorStore> : IPipelineStepHandler
                 }
 
                 // Get the embedding from the context
-                ReadOnlyMemory<float> embedding = ReadOnlyMemory<float>.Empty;
+                ReadOnlyMemory<float> embedding;
                 string embeddingKey = $"embedding_{file.Id}";
 
                 if (pipeline.ContextArguments.TryGetValue(embeddingKey, out var embeddingValue) && embeddingValue is float[] embeddingArray)
