@@ -127,7 +127,7 @@ public sealed class ImportOrchestrator : BaseOrchestrator
                         _logger?.LogWarning("Pipeline step '{StepName}' failed with transient error for document {DocumentId}, retrying (attempt {Attempt}/{MaxRetries})", 
                             stepName, pipeline.DocumentId, attempt, maxRetriesPerStep);
                         
-                        await Task.Delay(TimeSpan.FromMilliseconds(200 * attempt), ct).ConfigureAwait(false);
+                        await Task.Delay(TimeSpan.FromMilliseconds(200.0 * attempt), ct).ConfigureAwait(false);
                         continue; // retry same step
                     }
                     else
