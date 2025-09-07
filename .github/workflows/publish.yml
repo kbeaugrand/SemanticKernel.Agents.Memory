@@ -67,7 +67,18 @@ jobs:
       env:
         PackageCertificatePassword: ${{ secrets.PACKAGE_SIGNING_CERT_PASSWORD }}
     - name: Pack
-      run: dotnet pack --no-build --configuration Release /p:Version=${{ github.event.release.tag_name }} /p:PackageVersion=${{ github.event.release.tag_name }} /p:SignPackage=false
+      run: |
+        # Temporarily move certificate to prevent automatic signing during pack
+        if [ -f "PackageSigning.pfx" ]; then
+          mv PackageSigning.pfx PackageSigning.pfx.temp
+        fi
+
+        dotnet pack --no-build --configuration Release /p:Version=${{ github.event.release.tag_name }} /p:PackageVersion=${{ github.event.release.tag_name }} /p:SignPackage=false /p:PackageCertificateKeyFile=""
+
+        # Restore certificate for manual signing
+        if [ -f "PackageSigning.pfx.temp" ]; then
+          mv PackageSigning.pfx.temp PackageSigning.pfx
+        fi
       working-directory: ./
       env:
         PackageCertificatePassword: ${{ secrets.PACKAGE_SIGNING_CERT_PASSWORD }}
