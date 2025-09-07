@@ -15,9 +15,9 @@ jobs:
         package:
         - SemanticKernel.Agents.Memory.Abstractions
         - SemanticKernel.Agents.Memory.Core
-        - SemanticKernel.Agents.Memory.MCP
-        - SemanticKernel.Agents.Memory.Plugin
-        - SemanticKernel.Agents.Memory.Service
+        # - SemanticKernel.Agents.Memory.MCP
+        # - SemanticKernel.Agents.Memory.Plugin
+        # - SemanticKernel.Agents.Memory.Service
 
     steps:
     - uses: actions/checkout@v5
