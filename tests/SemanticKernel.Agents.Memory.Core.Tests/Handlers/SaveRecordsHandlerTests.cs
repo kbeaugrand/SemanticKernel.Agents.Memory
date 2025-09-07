@@ -100,7 +100,7 @@ public class SaveRecordsHandlerTests
     }
 
     // Note: Full integration tests with VectorStore would require substantial mocking
-    // of the VectorStore ecosystem. The core logic tests above verify the essential 
+    // of the VectorStore ecosystem. The core logic tests above verify the essential
     // behaviors of the SaveRecordsHandler. More comprehensive tests should be done
     // as integration tests with a real or test-specific VectorStore implementation.
 }

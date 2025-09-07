@@ -29,13 +29,13 @@ Quick intent: help contributors and AI agents be productive here — understand 
 
 - Common developer workflows
   - Build & run samples: `cd samples/SemanticKernel.Agents.Memory.Samples && dotnet run` (requires .NET 8+). Interactive menu with 5 demo modes.
-  - Start MarkitDown service: `python services/markitdown-service/app.py` or `docker-compose up markitdown-service` 
+  - Start MarkitDown service: `python services/markitdown-service/app.py` or `docker-compose up markitdown-service`
   - Configure Azure OpenAI: `dotnet user-secrets set "AzureOpenAI:Endpoint" "https://your-resource.openai.azure.com/"` (see samples/README)
   - Solution structure: No tests directory exists yet — handlers are tested via sample integration demos.
 
 - Editing tips for AI patches
   - Adding new handlers: implement in `Core/Handlers`, extend `MemoryIngestionOptions` with `With{HandlerName}()` method, register via handler options pattern
-  - Chunking strategies: extend `TextChunkingOptions` or `SemanticChunkingOptions` for behavior changes rather than hard-coding values  
+  - Chunking strategies: extend `TextChunkingOptions` or `SemanticChunkingOptions` for behavior changes rather than hard-coding values
   - Pipeline steps: handlers registered by step name ("text-extraction", "text-chunking", "generate-embeddings", "save-records") — order matters
   - Keep backwards compatibility: new overloads for fluent methods preferred over breaking changes to `ConfigureMemoryIngestion`
 
@@ -44,4 +44,4 @@ Quick intent: help contributors and AI agents be productive here — understand 
   - Pipeline execution: `orchestrator.NewDocumentUpload().WithFile(path).WithTag("type", "pdf").Build()` -> `PrepareNewDocumentUpload()` -> `RunPipelineAsync()`
   - Service resolution: `ImportOrchestrator` resolves handlers from DI container at runtime using `HandlerRegistration.HandlerType`
 
-If anything here is unclear or you want more examples (debugging recipes, adding vector stores, or extending chunking strategies), tell me which area to expand. 
+If anything here is unclear or you want more examples (debugging recipes, adding vector stores, or extending chunking strategies), tell me which area to expand.

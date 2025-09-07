@@ -17,11 +17,11 @@ This repository contains an advanced **Memory Pipeline** designed to enhance the
 - **Semantic Chunking**: Creates meaningful chunks by detecting document headings and structure (Markdown, underlined, numbered headings)
 - **Dependency Injection**: Full integration with Microsoft.Extensions.DependencyInjection for easy configuration and testing
 - **Fluent Configuration API**: Intuitive configuration syntax with `services.ConfigureMemoryIngestion(options => {...})`
-- Modular memory components supporting vector stores, databases, and custom memory handlers  
-- Efficient embedding and semantic search integration for context-aware retrieval  
-- Support for both short-term conversation memory and long-term knowledge persistence  
-- Scalable design to accommodate multi-agent systems and complex workflows  
-- Easy integration with Semantic Kernel SDK and extensible architecture for custom memory logic  
+- Modular memory components supporting vector stores, databases, and custom memory handlers
+- Efficient embedding and semantic search integration for context-aware retrieval
+- Support for both short-term conversation memory and long-term knowledge persistence
+- Scalable design to accommodate multi-agent systems and complex workflows
+- Easy integration with Semantic Kernel SDK and extensible architecture for custom memory logic
 
 ## Getting Started
 
