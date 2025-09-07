@@ -111,15 +111,33 @@ jobs:
         fi
 
         # Check for broken internal links in README
-        if grep -o '\[.*\](.*\.md)' README.md | while read link; do
-          file=$(echo "$link" | sed 's/.*](\(.*\))/\1/')
-          if [ ! -f "$file" ]; then
-            echo "❌ Broken link found: $file"
-            exit 1
+        echo "🔍 Checking local file links in README.md..."
+        broken_links=0
+
+        # Find all local file links (not starting with http/https)
+        while IFS= read -r link; do
+          if [[ -n "$link" ]]; then
+            # Extract the file path from the link
+            file=$(echo "$link" | sed 's/.*](\([^)]*\))/\1/')
+
+            echo "  Checking: $file"
+
+            if [ ! -f "$file" ]; then
+              echo "  ❌ Broken link found: $link -> $file (file does not exist)"
+              broken_links=$((broken_links + 1))
+            else
+              echo "  ✅ Link OK: $file"
+            fi
           fi
-        done; then
-          echo "❌ Broken links found in README.md"
+        done < <(grep -o '\[.*\]([^h][^t][^t][^p][^s]*[^)])' README.md 2>/dev/null)
+
+        if [ $broken_links -gt 0 ]; then
+          echo ""
+          echo "❌ Found $broken_links broken link(s) in README.md"
           exit 1
+        else
+          echo ""
+          echo "✅ All local file links in README.md are valid"
         fi
 
         # Check for basic sections in README
