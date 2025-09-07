@@ -1,4 +1,6 @@
-[![Build Status](https://github.com/kbeaugrand/SemanticKernel.Agents.Memory/actions/workflows/ci.yml/badge.svg)](https://github.com/kbeaugrand/SemanticKernel.Agents.Memory/actions)
+[![Build Status](https://github.com/kbeaugrand/SemanticKernel.Agents.Memory/actions/workflows/ci.yml/badge.svg)](https://github.com/kbeaugrand/SemanticKernel.Agents.Memory/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/kbeaugrand/SemanticKernel.Agents.Memory/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/kbeaugrand/SemanticKernel.Agents.Memory/actions/workflows/codeql-analysis.yml)
+[![Code Quality](https://github.com/kbeaugrand/SemanticKernel.Agents.Memory/actions/workflows/code-quality.yml/badge.svg)](https://github.com/kbeaugrand/SemanticKernel.Agents.Memory/actions/workflows/code-quality.yml)
 [![License](https://img.shields.io/github/license/kbeaugrand/SemanticKernel.Agents.Memory.svg)](https://github.com/kbeaugrand/SemanticKernel.Agents.Memory/blob/main/LICENSE)
 [![Issues](https://img.shields.io/github/issues/kbeaugrand/SemanticKernel.Agents.Memory.svg)](https://github.com/kbeaugrand/SemanticKernel.Agents.Memory/issues)
 [![Pull Requests](https://img.shields.io/github/issues-pr/kbeaugrand/SemanticKernel.Agents.Memory.svg)](https://github.com/kbeaugrand/SemanticKernel.Agents.Memory/pulls)
