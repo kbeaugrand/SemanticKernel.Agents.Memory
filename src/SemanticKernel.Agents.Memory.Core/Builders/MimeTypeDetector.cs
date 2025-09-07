@@ -7,7 +7,7 @@ namespace SemanticKernel.Agents.Memory.Core.Builders;
 /// <summary>
 /// Simple MIME type detector based on file extensions.
 /// </summary>
-internal sealed class MimeTypeDetector
+public sealed class MimeTypeDetector
 {
     private static readonly Dictionary<string, string> s_mimeTypeMappings = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -93,7 +93,7 @@ internal sealed class MimeTypeDetector
         
         // Archives
         { ".zip", "application/zip" },
-        { ".rar", "application/vnd.rar" },
+        { ".rar", "application/x-rar-compressed" },
         { ".7z", "application/x-7z-compressed" },
         { ".tar", "application/x-tar" },
         { ".gz", "application/gzip" },
