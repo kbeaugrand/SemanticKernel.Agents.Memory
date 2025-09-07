@@ -10,6 +10,7 @@ using Microsoft.Extensions.VectorData;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using SemanticKernel.Agents.Memory;
+using SemanticKernel.Rankers.Abstractions;
 using SemanticKernel.Agents.Memory.Core.Models;
 
 namespace SemanticKernel.Agents.Memory.Core.Services;
@@ -27,17 +28,21 @@ public class SearchClient<TVectorStore> : ISearchClient
 
     private readonly SearchClientOptions _options;
 
+    private readonly IRanker? _ranker;
+
     public SearchClient(TVectorStore vectorStore,
                         IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator,
                         IPromptProvider promptProvider,
                         IChatCompletionService chatCompletionService,
-                        SearchClientOptions? options = null)
+                        SearchClientOptions? options = null,
+                        IRanker? ranker = null)
     {
         _vectorStore = vectorStore;
         _embeddingGenerator = embeddingGenerator ?? throw new ArgumentNullException(nameof(embeddingGenerator));
         _promptProvider = promptProvider ?? throw new ArgumentNullException(nameof(promptProvider));
         _chatCompletionService = chatCompletionService ?? throw new ArgumentNullException(nameof(chatCompletionService));
         _options = options ?? new SearchClientOptions();
+        _ranker = ranker;
     }
 
     public async Task<SearchResult> SearchAsync(
@@ -74,28 +79,34 @@ public class SearchClient<TVectorStore> : ISearchClient
                 Filter = MapFiltersToVectorStoreFilter(filters)
             });
 
+            IAsyncEnumerable<(VectorSearchResult<MemoryRecord> Result, double Score)> rankedResults = null!;
+
+            // If a ranker is provided, use it to re-rank the results
+            if (_ranker is not null)
+            {
+                rankedResults = _ranker.RankAsync(query, searchResult, s => s.Text);
+            }
+            else
+            {
+                rankedResults = MapSearchResultsToRankedResultsAsync(searchResult);
+            }
+
             var citations = new List<Citation>();
 
             // Process search results and convert to Citations
-            await foreach (var result in searchResult.WithCancellation(cancellationToken).ConfigureAwait(false))
+            await foreach ((var result, double rankedScore) in rankedResults.WithCancellation(cancellationToken).ConfigureAwait(false))
             {
-                // Apply relevance filter
-                var score = result.Score ?? 0.0;
-                if (score < minRelevance)
-                {
-                    continue;
-                }
-
                 var citation = new Citation
                 {
                     Id = result.Record.Id,
                     Content = result.Record.Text,
                     Source = !string.IsNullOrEmpty(result.Record.FileName) ? result.Record.FileName : result.Record.DocumentId,
-                    RelevanceScore = score
+                    RelevanceScore = result.Score ?? rankedScore
                 };
 
                 citations.Add(citation);
             }
+
 
             return new SearchResult
             {
@@ -525,5 +536,23 @@ public class SearchClient<TVectorStore> : ISearchClient
         return combinedExpression == null
             ? null
             : Expression.Lambda<Func<MemoryRecord, bool>>(combinedExpression, parameter);
+    }
+
+    /// <summary>
+    /// Maps search results to ranked results format for streaming processing.
+    /// This helper function converts the vector search results to the expected format
+    /// used by the ranking system, preserving the original scores.
+    /// </summary>
+    /// <param name="searchResults">The search results from the vector store</param>
+    /// <returns>An async enumerable of ranked results with preserved scores</returns>
+    private static async IAsyncEnumerable<(VectorSearchResult<MemoryRecord> Result, double Score)> MapSearchResultsToRankedResultsAsync(
+        IAsyncEnumerable<VectorSearchResult<MemoryRecord>> searchResults)
+    {
+        await foreach (var result in searchResults.ConfigureAwait(false))
+        {
+            // Use the original search score, defaulting to 0.0 if not available
+            var score = result.Score ?? 0.0;
+            yield return (result, score);
+        }
     }
 }

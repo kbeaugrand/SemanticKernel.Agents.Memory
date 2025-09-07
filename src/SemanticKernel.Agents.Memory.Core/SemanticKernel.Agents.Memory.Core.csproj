@@ -24,6 +24,7 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="System.Text.Json" />
+    <PackageReference Include="SemanticKernel.Rankers.Abstractions" />
   </ItemGroup>
 
   <ItemGroup>
