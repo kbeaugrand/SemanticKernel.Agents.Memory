@@ -15,9 +15,9 @@ jobs:
         package:
         - SemanticKernel.Agents.Memory.Abstractions
         - SemanticKernel.Agents.Memory.Core
-        # - SemanticKernel.Agents.Memory.MCP
-        # - SemanticKernel.Agents.Memory.Plugin
-        # - SemanticKernel.Agents.Memory.Service
+        - SemanticKernel.Agents.Memory.MCP
+        - SemanticKernel.Agents.Memory.Plugin
+        - SemanticKernel.Agents.Memory.Service
 
     steps:
     - uses: actions/checkout@v5
@@ -52,14 +52,28 @@ jobs:
       run: dotnet restore
       working-directory: ./
     - name: Build
-      run: dotnet build --no-restore --configuration Release
+      run: dotnet build --no-restore --configuration Release /p:Version=${{ github.event.release.tag_name }} /p:PackageVersion=${{ github.event.release.tag_name }} /p:AssemblyVersion=${{ github.event.release.tag_name }} /p:FileVersion=${{ github.event.release.tag_name }}
       working-directory: ./
       env:
         PackageCertificatePassword: ${{ secrets.PACKAGE_SIGNING_CERT_PASSWORD }}
     - name: Pack
-      run: dotnet pack --configuration Release /p:Version=${{ github.event.release.tag_name }}
+      run: dotnet pack --no-build --configuration Release /p:Version=${{ github.event.release.tag_name }} /p:PackageVersion=${{ github.event.release.tag_name }} /p:SignPackage=false
       working-directory: ./
       env:
+        PackageCertificatePassword: ${{ secrets.PACKAGE_SIGNING_CERT_PASSWORD }}
+    - name: Sign packages
+      run: |
+        if [ ! -z "$PACKAGE_SIGNING_CERTIFICATE" ] && [ -f "PackageSigning.pfx" ]; then
+          echo "Signing packages..."
+          find . -name "${{ matrix.package }}.*.nupkg" -type f | while read package; do
+            echo "Signing package: $package"
+            dotnet nuget sign "$package" --certificate-path "PackageSigning.pfx" --certificate-password "$PackageCertificatePassword" --timestamper "http://timestamp.digicert.com"
+          done
+        else
+          echo "⚠️  No signing certificate available - packages will not be signed"
+        fi
+      env:
+        PACKAGE_SIGNING_CERTIFICATE: ${{ secrets.PACKAGE_SIGNING_CERT_BASE64 }}
         PackageCertificatePassword: ${{ secrets.PACKAGE_SIGNING_CERT_PASSWORD }}
     - name: Push to NuGet
       run: |
