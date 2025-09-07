@@ -26,27 +26,27 @@ jobs:
       with:
         dotnet-version: 8.x
 
-    - name: Setup package signing
-      run: |
-        if [ ! -z "$PACKAGE_SIGNING_CERTIFICATE" ]; then
-          echo "Creating certificate from secret..."
-          echo "$PACKAGE_SIGNING_CERTIFICATE" | base64 --decode > PackageSigning.pfx
-          echo "Certificate created for signing"
-        else
-          echo "⚠️  No signing certificate found"
-        fi
+    # - name: Setup package signing
+    #   run: |
+    #     if [ ! -z "$PACKAGE_SIGNING_CERTIFICATE" ]; then
+    #       echo "Creating certificate from secret..."
+    #       echo "$PACKAGE_SIGNING_CERTIFICATE" | base64 --decode > PackageSigning.pfx
+    #       echo "Certificate created for signing"
+    #     else
+    #       echo "⚠️  No signing certificate found"
+    #     fi
 
-        if [ ! -z "$STRONGNAME_KEY" ]; then
-          echo "Creating strong name key from secret..."
-          echo "$STRONGNAME_KEY" | base64 --decode > StrongName.snk
-          echo "Strong name key created"
-        else
-          echo "⚠️  No strong name key found - generating temporary key"
-          ./scripts/generate-signing-certificate.sh
-        fi
-      env:
-        PACKAGE_SIGNING_CERTIFICATE: ${{ secrets.PACKAGE_SIGNING_CERT_BASE64 }}
-        STRONGNAME_KEY: ${{ secrets.STRONGNAME_KEY_BASE64 }}
+    #     if [ ! -z "$STRONGNAME_KEY" ]; then
+    #       echo "Creating strong name key from secret..."
+    #       echo "$STRONGNAME_KEY" | base64 --decode > StrongName.snk
+    #       echo "Strong name key created"
+    #     else
+    #       echo "⚠️  No strong name key found - generating temporary key"
+    #       ./scripts/generate-signing-certificate.sh
+    #     fi
+    #   env:
+    #     PACKAGE_SIGNING_CERTIFICATE: ${{ secrets.PACKAGE_SIGNING_CERT_BASE64 }}
+    #     STRONGNAME_KEY: ${{ secrets.STRONGNAME_KEY_BASE64 }}
 
     - name: Restore dependencies
       run: dotnet restore
@@ -66,19 +66,20 @@ jobs:
       working-directory: ./
       env:
         PackageCertificatePassword: ${{ secrets.PACKAGE_SIGNING_CERT_PASSWORD }}
+
     - name: Pack
       run: |
-        # Temporarily move certificate to prevent automatic signing during pack
-        if [ -f "PackageSigning.pfx" ]; then
-          mv PackageSigning.pfx PackageSigning.pfx.temp
-        fi
+        # # Temporarily move certificate to prevent automatic signing during pack
+        # if [ -f "PackageSigning.pfx" ]; then
+        #   mv PackageSigning.pfx PackageSigning.pfx.temp
+        # fi
 
         dotnet pack --no-build --configuration Release /p:Version=${{ github.event.release.tag_name }} /p:PackageVersion=${{ github.event.release.tag_name }} /p:SignPackage=false /p:PackageCertificateKeyFile=""
 
-        # Restore certificate for manual signing
-        if [ -f "PackageSigning.pfx.temp" ]; then
-          mv PackageSigning.pfx.temp PackageSigning.pfx
-        fi
+        # # Restore certificate for manual signing
+        # if [ -f "PackageSigning.pfx.temp" ]; then
+        #   mv PackageSigning.pfx.temp PackageSigning.pfx
+        # fi
       working-directory: ./
       env:
         PackageCertificatePassword: ${{ secrets.PACKAGE_SIGNING_CERT_PASSWORD }}
