@@ -31,7 +31,7 @@
       <PackageSearchPath Condition="'$(PackageOutputPath)' != ''">$(PackageOutputPath)</PackageSearchPath>
       <PackageSearchPath Condition="'$(PackageOutputPath)' == ''">$(OutputPath)</PackageSearchPath>
     </PropertyGroup>
-    
+
     <ItemGroup>
       <PackagesToSign Include="$(PackageSearchPath)*.nupkg" />
     </ItemGroup>
@@ -57,7 +57,7 @@
       <PackageSearchPath Condition="'$(PackageOutputPath)' != ''">$(PackageOutputPath)</PackageSearchPath>
       <PackageSearchPath Condition="'$(PackageOutputPath)' == ''">$(OutputPath)</PackageSearchPath>
     </PropertyGroup>
-    
+
     <ItemGroup>
       <PackagesToSign Include="$(PackageSearchPath)*.nupkg" />
     </ItemGroup>
