@@ -27,6 +27,8 @@ class Program
         Console.WriteLine("3. Custom Configuration Demo");
         Console.WriteLine("4. Semantic Chunking with Custom Options");
         Console.WriteLine("5. Complete Flow Demo (Ingestion + Q&A)");
+        Console.WriteLine("6. Ranking Demo (BM25 + LM Ranker Pipeline)");
+        Console.WriteLine("7. Simple Ranking Demo (BM25 Concepts)");
         Console.WriteLine();
 
         // Get user choice
@@ -50,6 +52,12 @@ class Program
                     break;
                 case 5:
                     await CompleteFlowDemo.RunAsync(configuration);
+                    break;
+                case 6:
+                    await RankingDemo.RunAsync(configuration);
+                    break;
+                case 7:
+                    await SimpleRankingDemo.RunAsync(configuration);
                     break;
                 default:
                     Console.WriteLine("Invalid choice. Running basic demo...");
@@ -89,10 +97,10 @@ class Program
 
     static int GetUserChoice()
     {
-        Console.Write("Enter your choice (1-5): ");
+        Console.Write("Enter your choice (1-7): ");
         var input = Console.ReadLine();
 
-        if (int.TryParse(input, out int choice) && choice >= 1 && choice <= 5)
+        if (int.TryParse(input, out int choice) && choice >= 1 && choice <= 7)
         {
             return choice;
         }

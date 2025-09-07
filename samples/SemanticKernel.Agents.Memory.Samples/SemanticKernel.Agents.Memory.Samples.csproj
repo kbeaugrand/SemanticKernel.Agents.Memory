@@ -28,6 +28,10 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" />
     <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" />
     <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
+    <PackageReference Include="SemanticKernel.Rankers.Abstractions" />
+    <PackageReference Include="SemanticKernel.Rankers.BM25" />
+    <PackageReference Include="SemanticKernel.Rankers.LMRanker" />
+    <PackageReference Include="SemanticKernel.Rankers.Pipelines" />
   </ItemGroup>
 
   <ItemGroup>
