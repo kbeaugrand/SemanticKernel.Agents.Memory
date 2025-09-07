@@ -53,7 +53,7 @@ public sealed class ImportOrchestrator : BaseOrchestrator
         if (_disposed)
             throw new ObjectDisposedException(nameof(ImportOrchestrator));
 
-        _logger?.LogInformation("Starting pipeline execution for document {DocumentId} with {StepCount} steps: [{Steps}]", 
+        _logger?.LogInformation("Starting pipeline execution for document {DocumentId} with {StepCount} steps: [{Steps}]",
             pipeline.DocumentId, pipeline.RemainingSteps.Count, string.Join(", ", pipeline.RemainingSteps));
 
         var maxRetriesPerStep = 2;
@@ -66,11 +66,11 @@ public sealed class ImportOrchestrator : BaseOrchestrator
             var stepName = pipeline.RemainingSteps[0];
             completedSteps++;
 
-            _logger?.LogDebug("Executing pipeline step {CurrentStep}/{TotalSteps}: '{StepName}' for document {DocumentId}", 
+            _logger?.LogDebug("Executing pipeline step {CurrentStep}/{TotalSteps}: '{StepName}' for document {DocumentId}",
                 completedSteps, totalSteps, stepName, pipeline.DocumentId);
 
             // Find handler registration for this step
-            var handlerRegistration = _options.Handlers.FirstOrDefault(h => 
+            var handlerRegistration = _options.Handlers.FirstOrDefault(h =>
                 string.Equals(h.StepName, stepName, StringComparison.OrdinalIgnoreCase));
 
             if (handlerRegistration == null)
@@ -100,22 +100,22 @@ public sealed class ImportOrchestrator : BaseOrchestrator
                 attempt++;
                 try
                 {
-                    _logger?.LogTrace("Invoking handler '{HandlerName}' (attempt {Attempt}) for document {DocumentId}", 
+                    _logger?.LogTrace("Invoking handler '{HandlerName}' (attempt {Attempt}) for document {DocumentId}",
                         handler.StepName, attempt, pipeline.DocumentId);
 
                     var (result, updated) = await handler.InvokeAsync(pipeline, ct).ConfigureAwait(false);
                     pipeline = updated; // allow handler to mutate/replace pipeline instance if desired
 
                     var stepDuration = DateTimeOffset.UtcNow - stepStartTime;
-                    
+
                     if (result == ReturnType.Success)
                     {
                         pipeline.CompletedSteps.Add(stepName);
                         pipeline.RemainingSteps.RemoveAt(0);
                         var logMessage = $"Step completed successfully (attempt {attempt}) in {stepDuration.TotalMilliseconds:F1}ms.";
                         pipeline.Log(handler, logMessage);
-                        
-                        _logger?.LogInformation("Pipeline step '{StepName}' completed successfully for document {DocumentId} in {Duration:F1}ms (attempt {Attempt})", 
+
+                        _logger?.LogInformation("Pipeline step '{StepName}' completed successfully for document {DocumentId} in {Duration:F1}ms (attempt {Attempt})",
                             stepName, pipeline.DocumentId, stepDuration.TotalMilliseconds, attempt);
                         break; // next step
                     }
@@ -123,10 +123,10 @@ public sealed class ImportOrchestrator : BaseOrchestrator
                     {
                         var logMessage = $"Transient error; retrying (attempt {attempt}).";
                         pipeline.Log(handler, logMessage);
-                        
-                        _logger?.LogWarning("Pipeline step '{StepName}' failed with transient error for document {DocumentId}, retrying (attempt {Attempt}/{MaxRetries})", 
+
+                        _logger?.LogWarning("Pipeline step '{StepName}' failed with transient error for document {DocumentId}, retrying (attempt {Attempt}/{MaxRetries})",
                             stepName, pipeline.DocumentId, attempt, maxRetriesPerStep);
-                        
+
                         await Task.Delay(TimeSpan.FromMilliseconds(200.0 * attempt), ct).ConfigureAwait(false);
                         continue; // retry same step
                     }
@@ -134,10 +134,10 @@ public sealed class ImportOrchestrator : BaseOrchestrator
                     {
                         var logMessage = result == ReturnType.TransientError ? "Transient error; retries exhausted." : "Fatal error.";
                         pipeline.Log(handler, logMessage);
-                        
-                        _logger?.LogError("Pipeline step '{StepName}' failed for document {DocumentId} with result {Result} after {Attempts} attempts in {Duration:F1}ms", 
+
+                        _logger?.LogError("Pipeline step '{StepName}' failed for document {DocumentId} with result {Result} after {Attempts} attempts in {Duration:F1}ms",
                             stepName, pipeline.DocumentId, result, attempt, stepDuration.TotalMilliseconds);
-                        
+
                         throw new PipelineStepFailedException(stepName, result);
                     }
                 }
@@ -145,18 +145,18 @@ public sealed class ImportOrchestrator : BaseOrchestrator
                 {
                     var logMessage = $"Exception: {ex.GetType().Name} {ex.Message}; retrying (attempt {attempt}).";
                     pipeline.Log(handler, logMessage);
-                    
-                    _logger?.LogWarning(ex, "Pipeline step '{StepName}' threw exception for document {DocumentId}, retrying (attempt {Attempt}/{MaxRetries})", 
+
+                    _logger?.LogWarning(ex, "Pipeline step '{StepName}' threw exception for document {DocumentId}, retrying (attempt {Attempt}/{MaxRetries})",
                         stepName, pipeline.DocumentId, attempt, maxRetriesPerStep);
-                    
+
                     await Task.Delay(TimeSpan.FromMilliseconds(200 * (double)attempt), ct).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
                     var logMessage = $"Unhandled exception; aborting pipeline. {ex}";
                     pipeline.Log(handler, logMessage);
-                    
-                    _logger?.LogError(ex, "Pipeline step '{StepName}' failed with unhandled exception for document {DocumentId}, aborting pipeline", 
+
+                    _logger?.LogError(ex, "Pipeline step '{StepName}' failed with unhandled exception for document {DocumentId}, aborting pipeline",
                         stepName, pipeline.DocumentId);
                     throw;
                 }
@@ -166,9 +166,9 @@ public sealed class ImportOrchestrator : BaseOrchestrator
         pipeline.Complete = true;
         pipeline.UploadComplete = true; // in this minimal sample, upload happens inline
         pipeline.Touch();
-        
+
         var totalDuration = DateTimeOffset.UtcNow - pipeline.Creation;
-        _logger?.LogInformation("Pipeline execution completed successfully for document {DocumentId} in {Duration:F1}ms. Processed {TotalSteps} steps", 
+        _logger?.LogInformation("Pipeline execution completed successfully for document {DocumentId} in {Duration:F1}ms. Processed {TotalSteps} steps",
             pipeline.DocumentId, totalDuration.TotalMilliseconds, totalSteps);
     }
 

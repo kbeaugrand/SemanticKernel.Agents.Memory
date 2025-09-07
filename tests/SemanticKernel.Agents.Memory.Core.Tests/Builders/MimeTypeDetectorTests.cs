@@ -50,7 +50,7 @@ public class MimeTypeDetectorTests
     [InlineData("")]
     [InlineData("   ")]
     [InlineData(null)]
-    public void GetMimeType_WithNullOrEmptyFileName_ShouldReturnDefaultMimeType(string fileName)
+    public void GetMimeType_WithNullOrEmptyFileName_ShouldReturnDefaultMimeType(string? fileName)
     {
         // Arrange
         var detector = new MimeTypeDetector();

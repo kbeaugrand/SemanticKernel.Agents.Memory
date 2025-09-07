@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using SemanticKernel.Agents.Memory.Core;
 using SemanticKernel.Agents.Memory;
+using SemanticKernel.Agents.Memory.Core;
 
 namespace SemanticKernel.Agents.Memory.Core.Tests.TestUtilities;
 
@@ -32,8 +32,8 @@ public static class TestDataFactory
     /// Creates a sample Document for testing
     /// </summary>
     public static Document CreateSampleDocument(
-        string fileName = "test.txt", 
-        string content = "Sample document content", 
+        string fileName = "test.txt",
+        string content = "Sample document content",
         Dictionary<string, string>? tags = null)
     {
         var contentBytes = System.Text.Encoding.UTF8.GetBytes(content);

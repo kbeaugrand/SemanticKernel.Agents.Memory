@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using SemanticKernel.Agents.Memory;
 
 namespace SemanticKernel.Agents.Memory.Service;

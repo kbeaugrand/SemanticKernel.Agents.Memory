@@ -83,7 +83,7 @@ public class SimpleTextChunkingTests
         // Arrange
         var handler = new SimpleTextChunking();
         var extractedText = "This is a short text that fits in one chunk.";
-        
+
         var fileDetails = TestDataFactory.CreateSampleFileDetails(
             name: "test.txt",
             artifactType: ArtifactTypes.ExtractedText);
@@ -97,14 +97,14 @@ public class SimpleTextChunkingTests
 
         // Assert
         result.Result.Should().Be(ReturnType.Success);
-        
+
         // Should have the original file plus chunk files
         result.Pipeline.Files.Should().HaveCountGreaterThan(1);
-        
+
         // Check that chunk text was stored in context
         var chunkFiles = result.Pipeline.Files.Where(f => f.ArtifactType == ArtifactTypes.TextPartition).ToList();
         chunkFiles.Should().HaveCountGreaterThan(0);
-        
+
         var chunkFile = chunkFiles[0];
         var chunkTextKey = $"chunk_text_{chunkFile.Id}";
         result.Pipeline.ContextArguments.Should().ContainKey(chunkTextKey);
@@ -117,7 +117,7 @@ public class SimpleTextChunkingTests
         // Arrange
         var handler = new SimpleTextChunking();
         var longText = string.Join(" ", Enumerable.Repeat("This is a long sentence that will be repeated many times to create a text that exceeds the default chunk size.", 20));
-        
+
         var fileDetails = TestDataFactory.CreateSampleFileDetails(
             name: "longtext.txt",
             artifactType: ArtifactTypes.ExtractedText);
@@ -131,7 +131,7 @@ public class SimpleTextChunkingTests
 
         // Assert
         result.Result.Should().Be(ReturnType.Success);
-        
+
         // Should have the original file plus multiple chunk files
         var chunkFiles = result.Pipeline.Files.Where(f => f.ArtifactType == ArtifactTypes.TextPartition).ToList();
         chunkFiles.Should().HaveCountGreaterThan(1);
@@ -152,7 +152,7 @@ public class SimpleTextChunkingTests
     {
         // Arrange
         var handler = new SimpleTextChunking();
-        
+
         var file1 = TestDataFactory.CreateSampleFileDetails(
             name: "doc1.txt",
             artifactType: ArtifactTypes.ExtractedText);
@@ -170,17 +170,17 @@ public class SimpleTextChunkingTests
 
         // Assert
         result.Result.Should().Be(ReturnType.Success);
-        
+
         // Should have 2 original files plus chunk files
         result.Pipeline.Files.Should().HaveCountGreaterThan(2);
-        
+
         var chunkFiles = result.Pipeline.Files.Where(f => f.ArtifactType == ArtifactTypes.TextPartition).ToList();
         chunkFiles.Should().HaveCountGreaterThan(0);
-        
+
         // Should have chunks from both files
         chunkFiles.Should().Contain(f => f.Name.StartsWith("doc1."));
         chunkFiles.Should().Contain(f => f.Name.StartsWith("doc2."));
-        
+
         // Verify each chunk has corresponding text in context
         foreach (var chunkFile in chunkFiles)
         {
@@ -199,7 +199,7 @@ public class SimpleTextChunkingTests
             TextOverlap = 10
         };
         var handler = new SimpleTextChunking(options);
-        
+
         var longText = string.Join(" ", Enumerable.Repeat("Word", 50));
         var fileDetails = TestDataFactory.CreateSampleFileDetails(
             name: "test.txt",
@@ -214,7 +214,7 @@ public class SimpleTextChunkingTests
 
         // Assert
         result.Result.Should().Be(ReturnType.Success);
-        
+
         var chunkFiles = result.Pipeline.Files.Where(f => f.ArtifactType == ArtifactTypes.TextPartition).ToList();
         chunkFiles.Should().HaveCountGreaterThan(1);
 
@@ -245,7 +245,7 @@ public class SimpleTextChunkingTests
         cts.Cancel();
 
         // Act & Assert
-        await Assert.ThrowsAsync<OperationCanceledException>(() => 
+        await Assert.ThrowsAsync<OperationCanceledException>(() =>
             handler.InvokeAsync(pipeline, cts.Token));
     }
 
@@ -267,14 +267,14 @@ public class SimpleTextChunkingTests
 
         // Assert
         result.Result.Should().Be(ReturnType.Success);
-        
+
         var chunkFiles = result.Pipeline.Files.Where(f => f.ArtifactType == ArtifactTypes.TextPartition).ToList();
         chunkFiles.Should().HaveCountGreaterThan(0); // Sample text generates multiple chunks
-        
+
         var firstChunkFile = chunkFiles[0];
         var chunkTextKey = $"chunk_text_{firstChunkFile.Id}";
         result.Pipeline.ContextArguments.Should().ContainKey(chunkTextKey);
-        
+
         // Should contain generated sample text
         var chunkText = result.Pipeline.ContextArguments[chunkTextKey] as string;
         chunkText.Should().NotBeNullOrEmpty();
@@ -286,7 +286,7 @@ public class SimpleTextChunkingTests
     {
         // Arrange
         var handler = new SimpleTextChunking();
-        
+
         var extractedTextFile = TestDataFactory.CreateSampleFileDetails(
             name: "extracted.txt",
             artifactType: ArtifactTypes.ExtractedText);
@@ -303,11 +303,11 @@ public class SimpleTextChunkingTests
 
         // Assert
         result.Result.Should().Be(ReturnType.Success);
-        
+
         // Should process the extracted text file
         var chunkFiles = result.Pipeline.Files.Where(f => f.ArtifactType == ArtifactTypes.TextPartition).ToList();
         chunkFiles.Should().HaveCountGreaterThan(0);
-        
+
         // All chunk files should be related to the extracted text file
         foreach (var chunkFile in chunkFiles)
         {

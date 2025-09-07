@@ -127,8 +127,8 @@ public sealed class MimeTypeDetector
         if (string.IsNullOrEmpty(extension))
             return "application/octet-stream";
 
-        return s_mimeTypeMappings.TryGetValue(extension, out var mimeType) 
-            ? mimeType 
+        return s_mimeTypeMappings.TryGetValue(extension, out var mimeType)
+            ? mimeType
             : "application/octet-stream";
     }
 

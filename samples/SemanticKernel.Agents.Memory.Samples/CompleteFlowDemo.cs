@@ -6,24 +6,24 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure;
+using Azure.AI.OpenAI;
+using Azure.Identity;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.Extensions.AI;
-using Microsoft.SemanticKernel.Connectors.InMemory;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
-using Azure.AI.OpenAI;
-using Azure.Identity;
+using Microsoft.SemanticKernel.Connectors.AzureOpenAI;
+using Microsoft.SemanticKernel.Connectors.InMemory;
 using SemanticKernel.Agents.Memory;
 using SemanticKernel.Agents.Memory.Core;
 using SemanticKernel.Agents.Memory.Core.Extensions;
-using SemanticKernel.Agents.Memory.Core.Services;
 using SemanticKernel.Agents.Memory.Core.Handlers;
+using SemanticKernel.Agents.Memory.Core.Services;
 using SemanticKernel.Agents.Memory.Samples.Configuration;
-using Azure;
-using Microsoft.SemanticKernel.Connectors.AzureOpenAI;
 
 namespace SemanticKernel.Agents.Memory.Samples;
 
@@ -53,9 +53,9 @@ public static class CompleteFlowDemo
         var services = new ServiceCollection();
         var vectorStore = new InMemoryVectorStore();
         ConfigureCompleteFlowServices(services, configuration, vectorStore);
-        
+
         using var serviceProvider = services.BuildServiceProvider();
-        
+
         try
         {
             // Step 1: Document Ingestion
@@ -90,8 +90,8 @@ public static class CompleteFlowDemo
     /// Configures all services needed for the complete flow
     /// </summary>
     private static void ConfigureCompleteFlowServices(
-        IServiceCollection services, 
-        IConfiguration configuration, 
+        IServiceCollection services,
+        IConfiguration configuration,
         InMemoryVectorStore vectorStore)
     {
         // Add configuration
@@ -101,7 +101,7 @@ public static class CompleteFlowDemo
         services.Configure<TextChunkingConfig>(configuration.GetSection(TextChunkingConfig.SectionName));
 
         // Add logging
-        services.AddLogging(builder => 
+        services.AddLogging(builder =>
         {
             builder.AddConfiguration(configuration.GetSection("Logging"));
             builder.AddConsole();
@@ -155,7 +155,7 @@ public static class CompleteFlowDemo
     private static async Task<string> PerformIngestion(IServiceProvider serviceProvider, CancellationToken ct)
     {
         var orchestrator = serviceProvider.GetRequiredService<ImportOrchestrator>();
-        
+
         // Read the sample content file
         var sampleFilePath = Path.Combine(Directory.GetCurrentDirectory(), "sample-content.txt");
         if (!File.Exists(sampleFilePath))
@@ -174,9 +174,9 @@ public static class CompleteFlowDemo
         Console.WriteLine("⚙️  Starting document ingestion pipeline...");
         const string indexName = "default"; // Default index name
         var context = new NoopContext(); // Simple context implementation
-        
+
         (var documentId, _) = await orchestrator.ProcessUploadAsync(indexName, request, context, ct);
-        
+
         if (!string.IsNullOrEmpty(documentId))
         {
             Console.WriteLine($"✅ Ingestion completed successfully!");
@@ -208,7 +208,7 @@ public static class CompleteFlowDemo
 
         // Test 2: Semantic Search
         Console.WriteLine("🔎 Performing semantic searches...");
-        
+
         var searchQueries = new[]
         {
             "machine learning types",
@@ -220,7 +220,7 @@ public static class CompleteFlowDemo
         {
             Console.WriteLine($"   Query: \"{query}\"");
             var searchResult = await searchClient.SearchAsync(indexName, query, minRelevance: 0.7, limit: 3, cancellationToken: ct);
-            
+
             if (searchResult.NoResult)
             {
                 Console.WriteLine("     No results found.");
@@ -239,7 +239,7 @@ public static class CompleteFlowDemo
 
         // Test 3: Question Answering
         Console.WriteLine("❓ Asking questions using SearchClient...");
-        
+
         var questions = new[]
         {
             "What are the three main types of machine learning?",
@@ -254,11 +254,11 @@ public static class CompleteFlowDemo
             try
             {
                 var answer = await searchClient.AskAsync(indexName, question, minRelevance: 0.6, cancellationToken: ct);
-                
+
                 if (answer.HasResult)
                 {
                     Console.WriteLine($"   Answer: {answer.Result}");
-                    
+
                     if (answer.RelevantSources?.Count > 0)
                     {
                         Console.WriteLine($"   Sources used: {answer.RelevantSources.Count}");
@@ -304,7 +304,7 @@ public static class CompleteFlowDemo
         {
             Console.Write("Your question: ");
             var input = Console.ReadLine()?.Trim();
-            
+
             if (string.IsNullOrEmpty(input) || input.Equals("exit", StringComparison.OrdinalIgnoreCase))
             {
                 Console.WriteLine("👋 Goodbye!");
@@ -318,9 +318,9 @@ public static class CompleteFlowDemo
                     // Perform search
                     var searchQuery = input.Substring(7).Trim();
                     Console.WriteLine($"🔍 Searching for: \"{searchQuery}\"");
-                    
+
                     var searchResult = await searchClient.SearchAsync(indexName, searchQuery, minRelevance: 0.5, limit: 5, cancellationToken: ct);
-                    
+
                     if (searchResult.NoResult)
                     {
                         Console.WriteLine("❌ No results found.");
@@ -340,13 +340,13 @@ public static class CompleteFlowDemo
                 {
                     // Ask question
                     Console.WriteLine($"🤔 Thinking about: \"{input}\"");
-                    
+
                     var answer = await searchClient.AskAsync(indexName, input, minRelevance: 0.5, cancellationToken: ct);
-                    
+
                     if (answer.HasResult)
                     {
                         Console.WriteLine($"💡 Answer: {answer.Result}");
-                        
+
                         if (answer.RelevantSources?.Count > 0)
                         {
                             Console.WriteLine($"📚 Based on {answer.RelevantSources.Count} source(s)");
@@ -362,7 +362,7 @@ public static class CompleteFlowDemo
             {
                 Console.WriteLine($"❌ Error: {ex.Message}");
             }
-            
+
             Console.WriteLine();
         }
     }
@@ -373,7 +373,7 @@ public static class CompleteFlowDemo
     private static void ConfigureEmbeddingGenerator(IServiceCollection services, IConfiguration configuration)
     {
         var azureOpenAIOptions = configuration.GetSection(AzureOpenAIOptions.SectionName).Get<AzureOpenAIOptions>();
-        
+
         Console.WriteLine("🧪 Using Azure OpenAI embedding generator");
 
         // Configure the Azure OpenAI embedding generator
@@ -381,16 +381,16 @@ public static class CompleteFlowDemo
         {
             var logger = serviceProvider.GetService<ILogger<IEmbeddingGenerator<string, Embedding<float>>>>();
             var azureOpenAIOptions = serviceProvider.GetService<IOptions<AzureOpenAIOptions>>()?.Value ?? new AzureOpenAIOptions();
-            
+
             // Check if we have real credentials (not placeholders)
             bool hasRealCredentials = azureOpenAIOptions.IsValid();
-            
+
             if (!hasRealCredentials)
-            {            
+            {
                 logger?.LogWarning("Azure OpenAI credentials are not set or are using placeholder values. Please configure your Azure OpenAI Endpoint and ApiKey in the application settings.");
                 throw new InvalidOperationException("Azure OpenAI credentials are not configured properly.");
             }
-            
+
             try
             {
                 // Create Azure OpenAI client
@@ -401,13 +401,13 @@ public static class CompleteFlowDemo
                                                             .AsIEmbeddingGenerator();
 
                 logger?.LogInformation("Azure OpenAI embedding generator configured successfully with model: {ModelName}", azureOpenAIOptions.EmbeddingModel);
-                
+
                 return embeddingGenerator;
             }
             catch (Exception ex)
             {
                 logger?.LogError(ex, "Failed to configure Azure OpenAI embedding generator. Please ensure your Azure OpenAI credentials are correct.");
-                
+
                 throw new InvalidOperationException("Failed to configure Azure OpenAI embedding generator. See inner exception for details.", ex);
             }
         });
@@ -419,35 +419,35 @@ public static class CompleteFlowDemo
     private static void ConfigureChatCompletionService(IServiceCollection services, IConfiguration configuration)
     {
         var azureOpenAIOptions = configuration.GetSection(AzureOpenAIOptions.SectionName).Get<AzureOpenAIOptions>();
-        
+
         Console.WriteLine("🧪 Using Azure OpenAI chat completion service");
-        
+
         // Configure the Azure OpenAI chat completion
         services.AddSingleton<IChatCompletionService>(serviceProvider =>
         {
             var logger = serviceProvider.GetService<ILogger<IChatCompletionService>>();
             var azureOpenAIOptions = serviceProvider.GetService<IOptions<AzureOpenAIOptions>>()?.Value ?? new AzureOpenAIOptions();
-            
+
             // Check if we have real credentials (not placeholders)
             bool hasRealCredentials = azureOpenAIOptions.IsValid();
-            
+
             if (!hasRealCredentials)
-            {            
+            {
                 logger?.LogWarning("Azure OpenAI credentials are not set or are using placeholder values. Please configure your Azure OpenAI Endpoint and ApiKey in the application settings.");
                 throw new InvalidOperationException("Azure OpenAI credentials are not configured properly.");
             }
-            
+
             try
             {
                 // Create Azure OpenAI client
-                var chatCompletionService = new AzureOpenAIChatCompletionService (
+                var chatCompletionService = new AzureOpenAIChatCompletionService(
                     deploymentName: azureOpenAIOptions.CompletionModel,
                     apiKey: azureOpenAIOptions.ApiKey,
                     endpoint: azureOpenAIOptions.Endpoint);
 
 
                 logger?.LogInformation("Azure OpenAI chat completion configured successfully with model: {ModelName}", azureOpenAIOptions.CompletionModel);
-                
+
                 return chatCompletionService;
             }
             catch (Exception ex)

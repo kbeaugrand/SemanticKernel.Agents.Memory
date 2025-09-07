@@ -23,14 +23,14 @@ public class MemoryIngestionPipelineIntegrationTests
         // Arrange
         var services = new ServiceCollection();
         var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Debug));
-        
+
         // Setup mocks
         var mockMarkitDownService = new Mock<IMarkitDownService>();
         var mockEmbeddingGenerator = new Mock<IEmbeddingGenerator<string, Embedding<float>>>();
 
         mockMarkitDownService.Setup(x => x.IsHealthyAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
-        
+
         mockMarkitDownService.Setup(x => x.ConvertToMarkdownAsync(
                 It.IsAny<byte[]>(),
                 It.IsAny<string>(),
@@ -77,15 +77,15 @@ public class MemoryIngestionPipelineIntegrationTests
 
         // Act
         var orchestrator = serviceProvider.GetRequiredService<ImportOrchestrator>();
-        
+
         // Execute text extraction
         var textExtractionHandler = serviceProvider.GetRequiredService<TextExtractionHandler>();
         var textResult = await textExtractionHandler.InvokeAsync(pipeline);
-        
+
         // Execute text chunking
         var chunkingHandler = serviceProvider.GetRequiredService<SimpleTextChunking>();
         var chunkResult = await chunkingHandler.InvokeAsync(textResult.Pipeline);
-        
+
         // Execute embedding generation
         var embeddingHandler = serviceProvider.GetRequiredService<GenerateEmbeddingsHandler>();
         var embeddingResult = await embeddingHandler.InvokeAsync(chunkResult.Pipeline);
@@ -100,15 +100,15 @@ public class MemoryIngestionPipelineIntegrationTests
         // Verify files were processed
         finalPipeline.Files.Should().HaveCountGreaterThan(0);
         var files = finalPipeline.Files;
-        
+
         // Verify extracted text files exist
         var extractedTextFiles = files.Where(f => f.ArtifactType == ArtifactTypes.ExtractedText).ToList();
         extractedTextFiles.Should().HaveCountGreaterThan(0);
-        
+
         // Verify chunked files exist  
         var chunkFiles = files.Where(f => f.ArtifactType == ArtifactTypes.TextPartition).ToList();
         chunkFiles.Should().HaveCountGreaterThan(0);
-        
+
         // Verify content is stored in context arguments
         foreach (var chunkFile in chunkFiles)
         {
@@ -135,11 +135,11 @@ public class MemoryIngestionPipelineIntegrationTests
         // Arrange
         var services = new ServiceCollection();
         var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Debug));
-        
+
         var mockMarkitDownService = new Mock<IMarkitDownService>();
         mockMarkitDownService.Setup(x => x.IsHealthyAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
-        
+
         mockMarkitDownService.Setup(x => x.ConvertToMarkdownAsync(
                 It.IsAny<byte[]>(),
                 It.IsAny<string>(),
@@ -183,16 +183,16 @@ public class MemoryIngestionPipelineIntegrationTests
 
         // Assert
         options.Handlers.Should().HaveCount(4);
-        
+
         options.Handlers[0].StepName.Should().Be("text-extraction");
         options.Handlers[0].HandlerType.Should().Be(typeof(TextExtractionHandler));
-        
+
         options.Handlers[1].StepName.Should().Be("text-chunking");
         options.Handlers[1].HandlerType.Should().Be(typeof(SimpleTextChunking));
-        
+
         options.Handlers[2].StepName.Should().Be("text-chunking");
         options.Handlers[2].HandlerType.Should().Be(typeof(SemanticChunking));
-        
+
         options.Handlers[3].StepName.Should().Be("generate-embeddings");
         options.Handlers[3].HandlerType.Should().Be(typeof(GenerateEmbeddingsHandler));
     }
@@ -217,7 +217,7 @@ public class MemoryIngestionPipelineIntegrationTests
         orchestrator.HandlerNames.Should().BeEquivalentTo(new[]
         {
             "text-extraction",
-            "text-chunking", 
+            "text-chunking",
             "generate-embeddings"
         });
     }

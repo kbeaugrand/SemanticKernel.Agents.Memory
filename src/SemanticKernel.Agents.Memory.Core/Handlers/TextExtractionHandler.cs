@@ -67,12 +67,12 @@ public sealed class TextExtractionHandler : IPipelineStepHandler
                         // Use MarkitDown service to extract text as markdown
                         _logger.LogDebug("Converting {FileName} using MarkitDown service", upload.FileName);
                         extractedText = await _markitDownService.ConvertToMarkdownAsync(
-                            upload.Bytes, 
-                            upload.FileName, 
-                            upload.MimeType ?? "application/octet-stream", 
+                            upload.Bytes,
+                            upload.FileName,
+                            upload.MimeType ?? "application/octet-stream",
                             ct);
-                        
-                        _logger.LogInformation("Successfully extracted {CharCount} characters from {FileName}", 
+
+                        _logger.LogInformation("Successfully extracted {CharCount} characters from {FileName}",
                             extractedText.Length, upload.FileName);
                     }
                     catch (Exception ex)
@@ -113,7 +113,7 @@ public sealed class TextExtractionHandler : IPipelineStepHandler
         pipeline.FilesToUpload.Clear();
         pipeline.UploadComplete = true;
         pipeline.Log(this, $"Extracted text from {pipeline.Files.Count} file(s) using MarkitDown service.");
-        
+
         return (ReturnType.Success, pipeline);
     }
 
@@ -129,7 +129,7 @@ public sealed class TextExtractionHandler : IPipelineStepHandler
             {
                 return System.Text.Encoding.UTF8.GetString(upload.Bytes);
             }
-            
+
             // For binary files, return basic metadata
             return $"""
                 # {upload.FileName}

@@ -21,7 +21,7 @@ public interface IPipelineOrchestrator
         string index,
         DocumentUploadRequest upload,
         IContext context);
-        
+
     Task RunPipelineAsync(DataPipelineResult pipeline, CancellationToken ct = default);
 }
 
@@ -54,7 +54,7 @@ public abstract class BaseOrchestrator : IPipelineOrchestrator
     public virtual DataPipelineResult PrepareNewDocumentUpload(string index, DocumentUploadRequest upload, IContext context)
     {
         _logger?.LogDebug("Preparing new document upload for index '{Index}' with {FileCount} files", index, upload.Files.Count);
-        
+
         var pipeline = new DataPipelineResult
         {
             Index = string.IsNullOrWhiteSpace(index) ? "default" : index,
@@ -69,7 +69,7 @@ public abstract class BaseOrchestrator : IPipelineOrchestrator
             _logger?.LogTrace("Added pipeline step '{StepName}' for document {DocumentId}", step, pipeline.DocumentId);
         }
 
-        _logger?.LogInformation("Prepared pipeline for document {DocumentId} with {StepCount} steps: [{Steps}]", 
+        _logger?.LogInformation("Prepared pipeline for document {DocumentId} with {StepCount} steps: [{Steps}]",
             pipeline.DocumentId, pipeline.Steps.Count, string.Join(", ", pipeline.Steps));
 
         return pipeline;
@@ -78,17 +78,17 @@ public abstract class BaseOrchestrator : IPipelineOrchestrator
     public virtual async Task<string> ImportDocumentAsync(string index, DocumentUploadRequest upload, IContext context, CancellationToken ct = default)
     {
         _logger?.LogInformation("Starting document import for index '{Index}' with {FileCount} files", index, upload.Files.Count);
-        
+
         var startTime = DateTimeOffset.UtcNow;
         var pipeline = PrepareNewDocumentUpload(index, upload, context);
-        
+
         _logger?.LogDebug("Running pipeline for document {DocumentId}", pipeline.DocumentId);
         await RunPipelineAsync(pipeline, ct).ConfigureAwait(false);
-        
+
         var duration = DateTimeOffset.UtcNow - startTime;
-        _logger?.LogInformation("Document import completed for {DocumentId} in {Duration:F1}ms", 
+        _logger?.LogInformation("Document import completed for {DocumentId} in {Duration:F1}ms",
             pipeline.DocumentId, duration.TotalMilliseconds);
-            
+
         return pipeline.DocumentId;
     }
 

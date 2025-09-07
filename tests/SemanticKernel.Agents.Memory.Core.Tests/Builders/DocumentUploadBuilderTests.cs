@@ -17,7 +17,7 @@ public class DocumentUploadBuilderTests : IDisposable
     {
         _tempDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         Directory.CreateDirectory(_tempDirectory);
-        
+
         _testFilePath = Path.Combine(_tempDirectory, "test.txt");
         File.WriteAllText(_testFilePath, "This is test content");
     }
@@ -43,7 +43,7 @@ public class DocumentUploadBuilderTests : IDisposable
         result.Should().BeSameAs(builder); // Should return same instance for chaining
         var request = builder.Build();
         request.Files.Should().HaveCount(1);
-        
+
         var file = request.Files.First();
         file.FileName.Should().Be("test.txt");
         file.Bytes.Should().NotBeEmpty();
@@ -292,15 +292,15 @@ public class DocumentUploadBuilderTests : IDisposable
         // Assert
         result.Should().BeSameAs(builder);
         var request = builder.Build();
-        
+
         request.Files.Should().HaveCount(2);
         request.Files[0].FileName.Should().Be("test.txt");
         request.Files[1].FileName.Should().Be("binary.bin");
-        
+
         request.Tags.Should().HaveCount(2);
         request.Tags["type"].Should().Be("mixed");
         request.Tags["priority"].Should().Be("high");
-        
+
         request.Context.Should().HaveCount(1);
         request.Context["user"].Should().Be("test-user");
     }
@@ -340,7 +340,7 @@ public class DocumentUploadBuilderTests : IDisposable
         var txtPath = Path.Combine(_tempDirectory, "test.txt");
         var pdfPath = Path.Combine(_tempDirectory, "test.pdf");
         var jsonPath = Path.Combine(_tempDirectory, "test.json");
-        
+
         File.WriteAllText(txtPath, "text");
         File.WriteAllBytes(pdfPath, new byte[] { 1, 2, 3 });
         File.WriteAllText(jsonPath, "{}");
@@ -353,11 +353,11 @@ public class DocumentUploadBuilderTests : IDisposable
         // Assert
         var request = builder.Build();
         request.Files.Should().HaveCount(3);
-        
+
         var txtFile = request.Files.First(f => f.FileName == "test.txt");
         var pdfFile = request.Files.First(f => f.FileName == "test.pdf");
         var jsonFile = request.Files.First(f => f.FileName == "test.json");
-        
+
         // Note: Actual MIME type detection depends on MimeTypeDetector implementation
         txtFile.MimeType.Should().NotBeNullOrEmpty();
         pdfFile.MimeType.Should().NotBeNullOrEmpty();
@@ -391,7 +391,7 @@ public class DocumentUploadBuilderTests : IDisposable
         {
             largeContent[i] = (byte)(i % 256);
         }
-        
+
         using var stream = new MemoryStream(largeContent);
 
         // Act

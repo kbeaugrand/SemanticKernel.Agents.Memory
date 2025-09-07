@@ -64,9 +64,9 @@ public sealed class SemanticChunking : IPipelineStepHandler
     public Task<(ReturnType Result, DataPipelineResult Pipeline)> InvokeAsync(DataPipelineResult pipeline, CancellationToken ct = default)
     {
         ct.ThrowIfCancellationRequested();
-        
-        _logger?.LogDebug("Starting semantic chunking for {FileCount} files with options: MaxChunkSize={MaxChunkSize}, MinChunkSize={MinChunkSize}, TitleLevelThreshold={TitleLevelThreshold}", 
-            pipeline.Files.Count(f => f.ArtifactType == ArtifactTypes.ExtractedText), 
+
+        _logger?.LogDebug("Starting semantic chunking for {FileCount} files with options: MaxChunkSize={MaxChunkSize}, MinChunkSize={MinChunkSize}, TitleLevelThreshold={TitleLevelThreshold}",
+            pipeline.Files.Count(f => f.ArtifactType == ArtifactTypes.ExtractedText),
             _options.MaxChunkSize, _options.MinChunkSize, _options.TitleLevelThreshold);
 
         var newFiles = new List<FileDetails>();
@@ -82,11 +82,11 @@ public sealed class SemanticChunking : IPipelineStepHandler
             // Get the actual extracted text from the context
             var extractedTextKey = $"extracted_text_{file.Id}";
             string extractedText;
-            
+
             if (pipeline.ContextArguments.TryGetValue(extractedTextKey, out var textValue) && textValue is string text)
             {
                 extractedText = text;
-                _logger?.LogTrace("Retrieved extracted text for file '{FileName}': {CharacterCount} characters", 
+                _logger?.LogTrace("Retrieved extracted text for file '{FileName}': {CharacterCount} characters",
                     file.Name, extractedText.Length);
             }
             else
@@ -95,14 +95,14 @@ public sealed class SemanticChunking : IPipelineStepHandler
                 extractedText = GenerateSampleText(file.Name);
                 _logger?.LogWarning("No extracted text found for file '{FileName}', using generated sample text", file.Name);
             }
-            
-            _logger?.LogDebug("Chunking text for file '{FileName}' ({CharacterCount} characters)", 
+
+            _logger?.LogDebug("Chunking text for file '{FileName}' ({CharacterCount} characters)",
                 file.Name, extractedText.Length);
-            
+
             var chunks = ChunkTextSemantically(extractedText);
             totalChunks += chunks.Count;
 
-            _logger?.LogInformation("Created {ChunkCount} semantic chunks for file '{FileName}'", 
+            _logger?.LogInformation("Created {ChunkCount} semantic chunks for file '{FileName}'",
                 chunks.Count, file.Name);
 
             // Create chunked files
@@ -118,7 +118,7 @@ public sealed class SemanticChunking : IPipelineStepHandler
                     SectionNumber = file.SectionNumber
                 };
 
-                _logger?.LogTrace("Created chunk {ChunkIndex}/{TotalChunks} for file '{FileName}': {ChunkSize} characters, Title: '{ChunkTitle}'", 
+                _logger?.LogTrace("Created chunk {ChunkIndex}/{TotalChunks} for file '{FileName}': {ChunkSize} characters, Title: '{ChunkTitle}'",
                     i + 1, chunks.Count, file.Name, chunks[i].Content.Length, chunks[i].Title);
 
                 // Add generated file reference with chunk metadata
@@ -148,13 +148,13 @@ public sealed class SemanticChunking : IPipelineStepHandler
 
         // Add chunked files to pipeline
         pipeline.Files.AddRange(newFiles);
-        
+
         var logMessage = $"Created {totalChunks} semantic chunks from {pipeline.Files.Count(f => f.ArtifactType == ArtifactTypes.ExtractedText)} extracted text file(s).";
         pipeline.Log(this, logMessage);
-        
-        _logger?.LogInformation("Semantic chunking completed: {TotalChunks} chunks created from {SourceFileCount} files", 
+
+        _logger?.LogInformation("Semantic chunking completed: {TotalChunks} chunks created from {SourceFileCount} files",
             totalChunks, pipeline.Files.Count(f => f.ArtifactType == ArtifactTypes.ExtractedText));
-        
+
         ct.ThrowIfCancellationRequested();
         return Task.FromResult((ReturnType.Success, pipeline));
     }
@@ -216,7 +216,7 @@ public sealed class SemanticChunking : IPipelineStepHandler
             var currentHeading = headings[i];
             var nextHeading = i + 1 < headings.Count ? headings[i + 1] : null;
 
-            _logger?.LogTrace("Processing heading {HeadingIndex}/{TotalHeadings}: '{HeadingText}' (Level {Level})", 
+            _logger?.LogTrace("Processing heading {HeadingIndex}/{TotalHeadings}: '{HeadingText}' (Level {Level})",
                 i + 1, headings.Count, currentHeading.Text, currentHeading.Level);
 
             // Update title hierarchy based on heading level
@@ -225,7 +225,7 @@ public sealed class SemanticChunking : IPipelineStepHandler
             // Determine if this heading should start a new chunk
             bool shouldStartNewChunk = ShouldStartNewChunk(currentHeading, titleHierarchy);
 
-            _logger?.LogTrace("Heading '{HeadingText}' should start new chunk: {ShouldStartNewChunk}", 
+            _logger?.LogTrace("Heading '{HeadingText}' should start new chunk: {ShouldStartNewChunk}",
                 currentHeading.Text, shouldStartNewChunk);
 
             // Extract content between current heading and next heading (or end of text)
@@ -233,7 +233,7 @@ public sealed class SemanticChunking : IPipelineStepHandler
             var endPos = nextHeading?.Position ?? text.Length;
             var sectionContent = text.Substring(startPos, endPos - startPos);
 
-            _logger?.LogTrace("Section content for heading '{HeadingText}': {ContentLength} characters", 
+            _logger?.LogTrace("Section content for heading '{HeadingText}': {ContentLength} characters",
                 currentHeading.Text, sectionContent.Length);
 
             // If we should start a new chunk or this is the first heading
@@ -245,7 +245,7 @@ public sealed class SemanticChunking : IPipelineStepHandler
                     var precedingContent = text.Substring(currentPosition, currentHeading.Position - currentPosition).Trim();
                     if (!string.IsNullOrEmpty(precedingContent))
                     {
-                        _logger?.LogTrace("Adding preceding content ({ContentLength} characters) to existing chunk", 
+                        _logger?.LogTrace("Adding preceding content ({ContentLength} characters) to existing chunk",
                             precedingContent.Length);
                         AppendOrCreateChunk(chunks, precedingContent, titleHierarchy);
                     }
@@ -254,8 +254,8 @@ public sealed class SemanticChunking : IPipelineStepHandler
                 // Create new chunk for this section
                 var newChunks = ProcessSectionContent(sectionContent, currentHeading, titleHierarchy);
                 chunks.AddRange(newChunks);
-                
-                _logger?.LogTrace("Created {NewChunkCount} new chunks for section '{HeadingText}'", 
+
+                _logger?.LogTrace("Created {NewChunkCount} new chunks for section '{HeadingText}'",
                     newChunks.Count, currentHeading.Text);
             }
             else
@@ -274,21 +274,21 @@ public sealed class SemanticChunking : IPipelineStepHandler
             var remainingContent = text.Substring(currentPosition).Trim();
             if (!string.IsNullOrEmpty(remainingContent))
             {
-                _logger?.LogTrace("Adding remaining content ({ContentLength} characters) after last heading", 
+                _logger?.LogTrace("Adding remaining content ({ContentLength} characters) after last heading",
                     remainingContent.Length);
                 AppendOrCreateChunk(chunks, remainingContent, titleHierarchy);
             }
         }
 
         var finalChunks = chunks.Where(c => c.Content.Length >= _options.MinChunkSize).ToList();
-        
+
         // If no chunks meet the minimum size but we have content, keep at least one chunk
         if (!finalChunks.Any() && chunks.Any())
         {
             finalChunks.Add(chunks.OrderByDescending(c => c.Content.Length).First());
         }
-        
-        _logger?.LogTrace("Semantic chunking completed: {InitialChunkCount} chunks created, {FinalChunkCount} chunks after minimum size filter (min size: {MinChunkSize})", 
+
+        _logger?.LogTrace("Semantic chunking completed: {InitialChunkCount} chunks created, {FinalChunkCount} chunks after minimum size filter (min size: {MinChunkSize})",
             chunks.Count, finalChunks.Count, _options.MinChunkSize);
 
         return finalChunks;
@@ -320,7 +320,7 @@ public sealed class SemanticChunking : IPipelineStepHandler
         {
             var underlineChar = match.Groups[2].Value[0];
             var level = underlineChar == '=' ? 1 : 2; // = for H1, - for H2
-            
+
             headings.Add(new DetectedHeading
             {
                 Text = match.Groups[1].Value.Trim(),
@@ -335,7 +335,7 @@ public sealed class SemanticChunking : IPipelineStepHandler
         {
             var numberPart = match.Groups[1].Value;
             var level = numberPart.Count(c => c == '.');
-            
+
             headings.Add(new DetectedHeading
             {
                 Text = match.Groups[2].Value.Trim(),
@@ -420,7 +420,7 @@ public sealed class SemanticChunking : IPipelineStepHandler
         {
             // Split large content into multiple chunks while preserving the heading context
             var splitChunks = SplitContentIntoChunks(trimmedContent, titleHierarchy);
-            
+
             // Set the title and level for the first chunk
             if (splitChunks.Any())
             {
@@ -444,10 +444,10 @@ public sealed class SemanticChunking : IPipelineStepHandler
     {
         var chunks = new List<SemanticChunk>();
         var paragraphs = content.Split(new[] { "\n\n", "\r\n\r\n" }, StringSplitOptions.RemoveEmptyEntries);
-        
+
         // Track if the original content has paragraph breaks
         var hasOriginalParagraphBreaks = paragraphs.Length > 1;
-        
+
         // If no paragraph breaks found, split by sentences
         if (paragraphs.Length == 1)
         {
@@ -455,7 +455,7 @@ public sealed class SemanticChunking : IPipelineStepHandler
                                .Select(s => s.Trim() + (s.EndsWith('.') ? "" : "."))
                                .ToArray();
         }
-        
+
         var currentChunk = new StringBuilder();
         var currentTitle = titleHierarchy.LastOrDefault() ?? "Content";
 
@@ -494,7 +494,7 @@ public sealed class SemanticChunking : IPipelineStepHandler
             var separator = hasOriginalParagraphBreaks ? "\n\n" : " ";
             var separatorLength = currentChunk.Length > 0 ? separator.Length : 0;
             var wouldExceedLimit = currentChunk.Length + trimmedParagraph.Length + separatorLength > _options.MaxChunkSize;
-            
+
             if (wouldExceedLimit && currentChunk.Length > 0)
             {
                 // Create chunk with current content
@@ -566,7 +566,7 @@ public sealed class SemanticChunking : IPipelineStepHandler
         {
             // Check if adding this word would exceed the limit
             var wouldExceedLimit = currentChunk.Length + word.Length + 1 > _options.MaxChunkSize;
-            
+
             if (wouldExceedLimit && currentChunk.Length > 0)
             {
                 // Create chunk with current content
@@ -650,7 +650,7 @@ public sealed class SemanticChunking : IPipelineStepHandler
         }
 
         var lastChunk = chunks.Last();
-        
+
         // Check if we can append to the last chunk
         if (lastChunk.Content.Length + trimmedContent.Length + 2 <= _options.MaxChunkSize)
         {
@@ -676,31 +676,31 @@ public sealed class SemanticChunking : IPipelineStepHandler
         sb.AppendLine();
         sb.AppendLine("This is the introduction to the document.");
         sb.AppendLine();
-        
+
         sb.AppendLine("## Section 1: Overview");
         sb.AppendLine();
         sb.AppendLine("This section provides an overview of the main concepts. It contains multiple paragraphs that demonstrate how the semantic chunking works.");
         sb.AppendLine();
         sb.AppendLine("The semantic chunker analyzes the structure of the document and creates meaningful chunks based on headings and content organization.");
         sb.AppendLine();
-        
+
         sb.AppendLine("### Subsection 1.1: Details");
         sb.AppendLine();
         sb.AppendLine("This is a subsection that provides more detailed information. Since it's at level 3 and the default threshold is 2, this will not create a new chunk unless the parent section becomes too large.");
         sb.AppendLine();
-        
+
         sb.AppendLine("## Section 2: Implementation");
         sb.AppendLine();
         sb.AppendLine("This section describes the implementation details. Because it's a level 2 heading, it will create a new chunk.");
         sb.AppendLine();
-        
+
         for (int i = 1; i <= 3; i++)
         {
             sb.AppendLine($"Implementation paragraph {i}: This contains detailed technical information about how the semantic chunking algorithm works. ");
             sb.AppendLine($"It processes the document structure and maintains context about headings and their hierarchy. ");
             sb.AppendLine();
         }
-        
+
         sb.AppendLine("## Section 3: Examples");
         sb.AppendLine();
         sb.AppendLine("This final section provides examples of how the chunking works in practice.");

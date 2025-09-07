@@ -5,21 +5,21 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
+using Azure;
+using Azure.AI.OpenAI;
+using Azure.Core;
+using Azure.Identity;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Azure.AI.OpenAI;
-using Azure;
+using Microsoft.SemanticKernel.Connectors.InMemory;
 using OpenAI.Embeddings;
 using SemanticKernel.Agents.Memory.Core;
 using SemanticKernel.Agents.Memory.Core.Extensions;
 using SemanticKernel.Agents.Memory.Core.Handlers;
 using SemanticKernel.Agents.Memory.Samples.Configuration;
-using Microsoft.SemanticKernel.Connectors.InMemory;
-using Azure.Identity;
-using Azure.Core;
 
 namespace SemanticKernel.Agents.Memory.Samples;
 
@@ -43,7 +43,7 @@ public static class PipelineDemo
     {
         // Configure services
         var services = new ServiceCollection();
-        
+
         // Add configuration
         services.AddSingleton(configuration);
         services.Configure<AzureOpenAIOptions>(configuration.GetSection(AzureOpenAIOptions.SectionName));
@@ -52,7 +52,7 @@ public static class PipelineDemo
         services.Configure<PipelineOptions>(configuration.GetSection(PipelineOptions.SectionName));
 
         // Add logging
-        services.AddLogging(builder => 
+        services.AddLogging(builder =>
         {
             builder.AddConfiguration(configuration.GetSection("Logging"));
             builder.AddConsole();
@@ -86,19 +86,19 @@ public static class PipelineDemo
         {
             // Get the orchestrator from the service provider
             var orchestrator = serviceProvider.GetRequiredService<ImportOrchestrator>();
-            
+
             // Create sample files to test different formats
             var request = new DocumentUploadRequest
             {
                 Files =
                 {
-                    new UploadedFile{ 
-                        FileName = "hello.txt", 
+                    new UploadedFile{
+                        FileName = "hello.txt",
                         Bytes = Encoding.UTF8.GetBytes("# Hello World\n\nThis is a simple text file for testing."),
                         MimeType = "text/plain"
                     },
-                    new UploadedFile{ 
-                        FileName = "document.md", 
+                    new UploadedFile{
+                        FileName = "document.md",
                         Bytes = Encoding.UTF8.GetBytes("# Lorem Ipsum\n\n**Lorem ipsum** dolor sit amet, *consectetur* adipiscing elit.\n\n## Section 2\n\nSed do eiusmod tempor incididunt ut labore."),
                         MimeType = "text/markdown"
                     }
@@ -125,7 +125,7 @@ public static class PipelineDemo
     {
         // Configure services with semantic chunking
         var services = new ServiceCollection();
-        
+
         // Add configuration
         services.AddSingleton(configuration);
         services.Configure<AzureOpenAIOptions>(configuration.GetSection(AzureOpenAIOptions.SectionName));
@@ -134,7 +134,7 @@ public static class PipelineDemo
         services.Configure<PipelineOptions>(configuration.GetSection(PipelineOptions.SectionName));
 
         // Add logging
-        services.AddLogging(builder => 
+        services.AddLogging(builder =>
         {
             builder.AddConfiguration(configuration.GetSection("Logging"));
             builder.AddConsole();
@@ -170,14 +170,14 @@ public static class PipelineDemo
         {
             // Get the orchestrator from the service provider
             var orchestrator = serviceProvider.GetRequiredService<ImportOrchestrator>();
-            
+
             // Create a more structured document for semantic chunking
             var request = new DocumentUploadRequest
             {
                 Files =
                 {
-                    new UploadedFile{ 
-                        FileName = "structured-document.md", 
+                    new UploadedFile{
+                        FileName = "structured-document.md",
                         Bytes = Encoding.UTF8.GetBytes(@"# Main Document Title
 
 This is the introduction paragraph that provides context for the entire document.
@@ -230,7 +230,7 @@ Final thoughts and summary of the document content."),
     {
         // Configure services with custom handler and services
         var services = new ServiceCollection();
-        
+
         // Add configuration
         services.AddSingleton(configuration);
         services.Configure<AzureOpenAIOptions>(configuration.GetSection(AzureOpenAIOptions.SectionName));
@@ -239,7 +239,7 @@ Final thoughts and summary of the document content."),
         services.Configure<PipelineOptions>(configuration.GetSection(PipelineOptions.SectionName));
 
         // Add logging
-        services.AddLogging(builder => 
+        services.AddLogging(builder =>
         {
             builder.AddConfiguration(configuration.GetSection("Logging"));
             builder.AddConsole();
@@ -282,7 +282,7 @@ Final thoughts and summary of the document content."),
         {
             // Get the orchestrator from the service provider
             var orchestrator = serviceProvider.GetRequiredService<ImportOrchestrator>();
-            
+
             // Create sample files using the fluent API
             var (documentId, logs) = await orchestrator.ProcessUploadAsync(
                 index: pipelineConfig.DefaultIndex,
@@ -292,7 +292,7 @@ Final thoughts and summary of the document content."),
                     .WithTag("size", "large"),
                 context: new NoopContext(),
                 ct);
-            
+
             return (documentId, logs);
         }
         finally
@@ -328,16 +328,16 @@ Final thoughts and summary of the document content."),
         {
             var logger = serviceProvider.GetService<ILogger<IEmbeddingGenerator<string, Embedding<float>>>>();
             var azureOpenAIOptions = serviceProvider.GetService<IOptions<AzureOpenAIOptions>>()?.Value ?? new AzureOpenAIOptions();
-            
+
             // Check if we have real credentials (not placeholders)
             bool hasRealCredentials = azureOpenAIOptions.IsValid();
-            
+
             if (!hasRealCredentials)
-            {            
+            {
                 logger?.LogWarning("Azure OpenAI credentials are not set or are using placeholder values. Please configure your Azure OpenAI Endpoint and ApiKey in the application settings.");
                 throw new InvalidOperationException("Azure OpenAI credentials are not configured properly.");
             }
-            
+
             try
             {
                 // Create Azure OpenAI client
@@ -348,13 +348,13 @@ Final thoughts and summary of the document content."),
                                                             .AsIEmbeddingGenerator();
 
                 logger?.LogInformation("Azure OpenAI embedding generator configured successfully with model: {ModelName}", azureOpenAIOptions.EmbeddingModel);
-                
+
                 return embeddingGenerator;
             }
             catch (Exception ex)
             {
                 logger?.LogError(ex, "Failed to configure Azure OpenAI embedding generator. Please ensure your Azure OpenAI credentials are correct.");
-                
+
                 throw new InvalidOperationException("Failed to configure Azure OpenAI embedding generator. See inner exception for details.", ex);
             }
         });
@@ -529,7 +529,7 @@ The conclusion ties together all the concepts discussed in the previous sections
             var orchestrator = serviceProvider.GetRequiredService<ImportOrchestrator>();
 
             // Demonstrate different fluent API upload methods
-            
+
             // Method 1: Using the fluent builder with multiple upload methods
             var (documentId, logs) = await orchestrator.ProcessUploadAsync(
                 index: pipelineConfig.DefaultIndex,

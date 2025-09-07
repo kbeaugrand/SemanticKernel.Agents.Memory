@@ -36,22 +36,22 @@ public sealed class MarkitDownService : IMarkitDownService
     {
         try
         {
-            _logger.LogInformation("Converting file {FileName} ({MimeType}, {Size} bytes) to markdown", 
+            _logger.LogInformation("Converting file {FileName} ({MimeType}, {Size} bytes) to markdown",
                 fileName, mimeType, fileBytes.Length);
 
             using var form = new MultipartFormDataContent();
             using var fileContent = new ByteArrayContent(fileBytes);
-            
+
             fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(mimeType ?? "application/octet-stream");
             form.Add(fileContent, "file", fileName);
             form.Add(new StringContent(fileName), "filename");
 
             var response = await _httpClient.PostAsync($"{_baseUrl}/convert", form, cancellationToken);
-            
+
             if (!response.IsSuccessStatusCode)
             {
                 var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
-                _logger.LogError("MarkitDown service returned error {StatusCode}: {Error}", 
+                _logger.LogError("MarkitDown service returned error {StatusCode}: {Error}",
                     response.StatusCode, errorContent);
                 throw new HttpRequestException($"MarkitDown service error: {response.StatusCode} - {errorContent}");
             }
@@ -70,7 +70,7 @@ public sealed class MarkitDownService : IMarkitDownService
                 throw new InvalidOperationException($"MarkitDown conversion failed: {error}");
             }
 
-            _logger.LogInformation("Successfully converted {FileName} to markdown ({MarkdownSize} characters)", 
+            _logger.LogInformation("Successfully converted {FileName} to markdown ({MarkdownSize} characters)",
                 fileName, result.Markdown?.Length ?? 0);
 
             return result.Markdown ?? string.Empty;
@@ -94,11 +94,11 @@ public sealed class MarkitDownService : IMarkitDownService
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             var response = await _httpClient.PostAsync($"{_baseUrl}/convert-url", content, cancellationToken);
-            
+
             if (!response.IsSuccessStatusCode)
             {
                 var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
-                _logger.LogError("MarkitDown service returned error {StatusCode}: {Error}", 
+                _logger.LogError("MarkitDown service returned error {StatusCode}: {Error}",
                     response.StatusCode, errorContent);
                 throw new HttpRequestException($"MarkitDown service error: {response.StatusCode} - {errorContent}");
             }
@@ -117,7 +117,7 @@ public sealed class MarkitDownService : IMarkitDownService
                 throw new InvalidOperationException($"MarkitDown URL conversion failed: {error}");
             }
 
-            _logger.LogInformation("Successfully converted URL {Url} to markdown ({MarkdownSize} characters)", 
+            _logger.LogInformation("Successfully converted URL {Url} to markdown ({MarkdownSize} characters)",
                 url, result.Markdown?.Length ?? 0);
 
             return result.Markdown ?? string.Empty;
@@ -151,19 +151,19 @@ public sealed class MarkitDownService : IMarkitDownService
     {
         [JsonPropertyName("success")]
         public bool Success { get; set; }
-        
+
         [JsonPropertyName("filename")]
         public string? Filename { get; set; }
-        
+
         [JsonPropertyName("markdown")]
         public string? Markdown { get; set; }
-        
+
         [JsonPropertyName("original_size")]
         public long OriginalSize { get; set; }
-        
+
         [JsonPropertyName("markdown_size")]
         public int MarkdownSize { get; set; }
-        
+
         [JsonPropertyName("error")]
         public string? Error { get; set; }
     }
@@ -175,16 +175,16 @@ public sealed class MarkitDownService : IMarkitDownService
     {
         [JsonPropertyName("success")]
         public bool Success { get; set; }
-        
+
         [JsonPropertyName("url")]
         public string? Url { get; set; }
-        
+
         [JsonPropertyName("markdown")]
         public string? Markdown { get; set; }
-        
+
         [JsonPropertyName("markdown_size")]
         public int MarkdownSize { get; set; }
-        
+
         [JsonPropertyName("error")]
         public string? Error { get; set; }
     }

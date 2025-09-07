@@ -31,7 +31,7 @@ public class MemoryIngestionOptionsTests
         // Assert
         result.Should().BeSameAs(options); // Fluent interface
         options.Handlers.Should().HaveCount(1);
-        
+
         var handler = options.Handlers[0];
         handler.HandlerType.Should().Be(typeof(MockHandler));
         handler.StepName.Should().Be("test-step");
@@ -64,7 +64,7 @@ public class MemoryIngestionOptionsTests
         // Assert
         result.Should().BeSameAs(options);
         options.Handlers.Should().HaveCount(1);
-        
+
         var handler = options.Handlers[0];
         handler.HandlerType.Should().Be(typeof(SimpleTextChunking));
         handler.StepName.Should().Be("text-chunking");
@@ -82,7 +82,7 @@ public class MemoryIngestionOptionsTests
         // Assert
         result.Should().BeSameAs(options);
         options.Handlers.Should().HaveCount(1);
-        
+
         var handler = options.Handlers[0];
         handler.HandlerType.Should().Be(typeof(SimpleTextChunking));
         handler.StepName.Should().Be("text-chunking");
@@ -105,7 +105,7 @@ public class MemoryIngestionOptionsTests
         // Assert
         result.Should().BeSameAs(options);
         options.Handlers.Should().HaveCount(1);
-        
+
         var handler = options.Handlers[0];
         handler.HandlerType.Should().Be(typeof(SimpleTextChunking));
         handler.StepName.Should().Be("text-chunking");
@@ -127,7 +127,7 @@ public class MemoryIngestionOptionsTests
         // Assert
         result.Should().BeSameAs(options);
         options.Handlers.Should().HaveCount(1);
-        
+
         var handler = options.Handlers[0];
         handler.HandlerType.Should().Be(typeof(SimpleTextChunking));
         handler.StepName.Should().Be("text-chunking");
@@ -156,7 +156,7 @@ public class MemoryIngestionOptionsTests
         // Assert
         result.Should().BeSameAs(options);
         options.Handlers.Should().HaveCount(1);
-        
+
         var handler = options.Handlers[0];
         handler.HandlerType.Should().Be(typeof(SemanticChunking));
         handler.StepName.Should().Be("text-chunking");
@@ -177,13 +177,13 @@ public class MemoryIngestionOptionsTests
         // Assert
         result.Should().BeSameAs(options);
         options.Handlers.Should().HaveCount(3);
-        
+
         options.Handlers[0].StepName.Should().Be("step1");
         options.Handlers[0].Lifetime.Should().Be(ServiceLifetime.Scoped);
-        
+
         options.Handlers[1].StepName.Should().Be("text-chunking");
         options.Handlers[1].HandlerType.Should().Be(typeof(SimpleTextChunking));
-        
+
         options.Handlers[2].StepName.Should().Be("step3");
         options.Handlers[2].Lifetime.Should().Be(ServiceLifetime.Singleton);
     }

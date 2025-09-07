@@ -36,7 +36,7 @@ public static class ServiceCollectionExtensions
     /// <param name="httpClientName">Name for the HTTP client (default: MarkitDown)</param>
     /// <returns>Service collection for chaining</returns>
     public static IServiceCollection AddMarkitDownTextExtraction(
-        this IServiceCollection services, 
+        this IServiceCollection services,
         string markitDownServiceUrl = "http://localhost:5000",
         string httpClientName = "MarkitDown")
     {
@@ -54,7 +54,7 @@ public static class ServiceCollectionExtensions
             var httpClientFactory = serviceProvider.GetRequiredService<IHttpClientFactory>();
             var logger = serviceProvider.GetRequiredService<ILogger<MarkitDownService>>();
             var httpClient = httpClientFactory.CreateClient(httpClientName);
-            
+
             return new MarkitDownService(httpClient, logger, markitDownServiceUrl);
         });
 
@@ -88,7 +88,7 @@ public static class ServiceCollectionExtensions
             var httpClientFactory = serviceProvider.GetRequiredService<IHttpClientFactory>();
             var logger = serviceProvider.GetRequiredService<ILogger<MarkitDownService>>();
             var httpClient = httpClientFactory.CreateClient(httpClientName);
-            
+
             return new MarkitDownService(httpClient, logger, markitDownServiceUrl);
         });
 
@@ -143,7 +143,7 @@ public static class ServiceCollectionExtensions
 
         // Register the ImportOrchestrator
         services.AddScoped<ImportOrchestrator>();
-        services.AddScoped<IPipelineOrchestrator>(provider => 
+        services.AddScoped<IPipelineOrchestrator>(provider =>
             provider.GetRequiredService<ImportOrchestrator>());
 
         return services;
@@ -184,10 +184,10 @@ public static class ServiceCollectionExtensions
             var embeddingGenerator = provider.GetRequiredService<Microsoft.Extensions.AI.IEmbeddingGenerator<string, Microsoft.Extensions.AI.Embedding<float>>>();
             var promptProvider = provider.GetRequiredService<IPromptProvider>();
             var chatCompletionService = provider.GetRequiredService<Microsoft.SemanticKernel.ChatCompletion.IChatCompletionService>();
-            
+
             return new SearchClient<TVectorStore>(vectorStore, embeddingGenerator, promptProvider, chatCompletionService, options);
         });
-        
+
         services.AddScoped<SemanticKernel.Agents.Memory.ISearchClient>(provider =>
             provider.GetRequiredService<SearchClient<TVectorStore>>());
 
