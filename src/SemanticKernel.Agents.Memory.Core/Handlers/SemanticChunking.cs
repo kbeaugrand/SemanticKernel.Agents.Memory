@@ -61,8 +61,10 @@ public sealed class SemanticChunking : IPipelineStepHandler
         _logger = logger;
     }
 
-    public async Task<(ReturnType Result, DataPipelineResult Pipeline)> InvokeAsync(DataPipelineResult pipeline, CancellationToken ct = default)
+    public Task<(ReturnType Result, DataPipelineResult Pipeline)> InvokeAsync(DataPipelineResult pipeline, CancellationToken ct = default)
     {
+        ct.ThrowIfCancellationRequested();
+        
         _logger?.LogDebug("Starting semantic chunking for {FileCount} files with options: MaxChunkSize={MaxChunkSize}, MinChunkSize={MinChunkSize}, TitleLevelThreshold={TitleLevelThreshold}", 
             pipeline.Files.Count(f => f.ArtifactType == ArtifactTypes.ExtractedText), 
             _options.MaxChunkSize, _options.MinChunkSize, _options.TitleLevelThreshold);
@@ -153,8 +155,8 @@ public sealed class SemanticChunking : IPipelineStepHandler
         _logger?.LogInformation("Semantic chunking completed: {TotalChunks} chunks created from {SourceFileCount} files", 
             totalChunks, pipeline.Files.Count(f => f.ArtifactType == ArtifactTypes.ExtractedText));
         
-        await Task.Yield();
-        return (ReturnType.Success, pipeline);
+        ct.ThrowIfCancellationRequested();
+        return Task.FromResult((ReturnType.Success, pipeline));
     }
 
     /// <summary>
@@ -280,6 +282,12 @@ public sealed class SemanticChunking : IPipelineStepHandler
 
         var finalChunks = chunks.Where(c => c.Content.Length >= _options.MinChunkSize).ToList();
         
+        // If no chunks meet the minimum size but we have content, keep at least one chunk
+        if (!finalChunks.Any() && chunks.Any())
+        {
+            finalChunks.Add(chunks.OrderByDescending(c => c.Content.Length).First());
+        }
+        
         _logger?.LogTrace("Semantic chunking completed: {InitialChunkCount} chunks created, {FinalChunkCount} chunks after minimum size filter (min size: {MinChunkSize})", 
             chunks.Count, finalChunks.Count, _options.MinChunkSize);
 
@@ -390,13 +398,19 @@ public sealed class SemanticChunking : IPipelineStepHandler
     private List<SemanticChunk> ProcessSectionContent(string content, DetectedHeading heading, List<string> titleHierarchy)
     {
         var chunks = new List<SemanticChunk>();
+        var trimmedContent = content.Trim();
 
-        if (content.Length <= _options.MaxChunkSize)
+        if (string.IsNullOrEmpty(trimmedContent))
+        {
+            return chunks;
+        }
+
+        if (trimmedContent.Length <= _options.MaxChunkSize)
         {
             // Content fits in one chunk
             chunks.Add(new SemanticChunk
             {
-                Content = content.Trim(),
+                Content = trimmedContent,
                 Title = heading.Text,
                 TitleLevel = heading.Level,
                 TitleHierarchy = new List<string>(titleHierarchy)
@@ -404,17 +418,196 @@ public sealed class SemanticChunking : IPipelineStepHandler
         }
         else
         {
-            // Split large content by paragraphs
-            var paragraphChunks = ChunkByParagraphs(content, titleHierarchy);
+            // Split large content into multiple chunks while preserving the heading context
+            var splitChunks = SplitContentIntoChunks(trimmedContent, titleHierarchy);
             
             // Set the title and level for the first chunk
-            if (paragraphChunks.Any())
+            if (splitChunks.Any())
             {
-                paragraphChunks[0].Title = heading.Text;
-                paragraphChunks[0].TitleLevel = heading.Level;
+                splitChunks[0].Title = heading.Text;
+                splitChunks[0].TitleLevel = heading.Level;
             }
 
-            chunks.AddRange(paragraphChunks);
+            chunks.AddRange(splitChunks);
+        }
+
+        return chunks;
+    }
+
+    /// <summary>
+    /// Splits content into multiple chunks respecting max chunk size while trying to preserve paragraph boundaries.
+    /// </summary>
+    /// <param name="content">The content to split.</param>
+    /// <param name="titleHierarchy">Current title hierarchy.</param>
+    /// <returns>List of chunks.</returns>
+    private List<SemanticChunk> SplitContentIntoChunks(string content, List<string> titleHierarchy)
+    {
+        var chunks = new List<SemanticChunk>();
+        var paragraphs = content.Split(new[] { "\n\n", "\r\n\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+        
+        // Track if the original content has paragraph breaks
+        var hasOriginalParagraphBreaks = paragraphs.Length > 1;
+        
+        // If no paragraph breaks found, split by sentences
+        if (paragraphs.Length == 1)
+        {
+            paragraphs = content.Split(new[] { ". ", ".\n", ".\r\n" }, StringSplitOptions.RemoveEmptyEntries)
+                               .Select(s => s.Trim() + (s.EndsWith('.') ? "" : "."))
+                               .ToArray();
+        }
+        
+        var currentChunk = new StringBuilder();
+        var currentTitle = titleHierarchy.LastOrDefault() ?? "Content";
+
+        foreach (var paragraph in paragraphs)
+        {
+            var trimmedParagraph = paragraph.Trim();
+            if (string.IsNullOrEmpty(trimmedParagraph)) continue;
+
+            // If this single paragraph is too large, force split it by words
+            if (trimmedParagraph.Length > _options.MaxChunkSize)
+            {
+                // First, save any current chunk content
+                if (currentChunk.Length > 0)
+                {
+                    var chunkContent = currentChunk.ToString().Trim();
+                    if (!string.IsNullOrEmpty(chunkContent))
+                    {
+                        chunks.Add(new SemanticChunk
+                        {
+                            Content = chunkContent,
+                            Title = currentTitle,
+                            TitleLevel = 0,
+                            TitleHierarchy = new List<string>(titleHierarchy)
+                        });
+                    }
+                    currentChunk.Clear();
+                }
+
+                // Force split the large paragraph
+                var wordChunks = ForceWordSplit(trimmedParagraph, titleHierarchy);
+                chunks.AddRange(wordChunks);
+                continue;
+            }
+
+            // Check if adding this paragraph would exceed the limit
+            var separator = hasOriginalParagraphBreaks ? "\n\n" : " ";
+            var separatorLength = currentChunk.Length > 0 ? separator.Length : 0;
+            var wouldExceedLimit = currentChunk.Length + trimmedParagraph.Length + separatorLength > _options.MaxChunkSize;
+            
+            if (wouldExceedLimit && currentChunk.Length > 0)
+            {
+                // Create chunk with current content
+                var chunkContent = currentChunk.ToString().Trim();
+                if (!string.IsNullOrEmpty(chunkContent))
+                {
+                    chunks.Add(new SemanticChunk
+                    {
+                        Content = chunkContent,
+                        Title = currentTitle,
+                        TitleLevel = 0, // No specific level for split chunks
+                        TitleHierarchy = new List<string>(titleHierarchy)
+                    });
+                }
+
+                // Start new chunk
+                currentChunk.Clear();
+            }
+
+            // Add paragraph to current chunk
+            if (currentChunk.Length > 0)
+            {
+                if (hasOriginalParagraphBreaks)
+                {
+                    currentChunk.AppendLine();
+                    currentChunk.AppendLine();
+                }
+                else
+                {
+                    currentChunk.Append(" ");
+                }
+            }
+            currentChunk.Append(trimmedParagraph);
+        }
+
+        // Add final chunk if it has content
+        if (currentChunk.Length > 0)
+        {
+            var chunkContent = currentChunk.ToString().Trim();
+            if (!string.IsNullOrEmpty(chunkContent))
+            {
+                chunks.Add(new SemanticChunk
+                {
+                    Content = chunkContent,
+                    Title = currentTitle,
+                    TitleLevel = 0,
+                    TitleHierarchy = new List<string>(titleHierarchy)
+                });
+            }
+        }
+
+        return chunks;
+    }
+
+    /// <summary>
+    /// Force splits content at word boundaries when other methods fail.
+    /// </summary>
+    /// <param name="content">The content to split.</param>
+    /// <param name="titleHierarchy">Current title hierarchy.</param>
+    /// <returns>List of chunks split at word boundaries.</returns>
+    private List<SemanticChunk> ForceWordSplit(string content, List<string> titleHierarchy)
+    {
+        var chunks = new List<SemanticChunk>();
+        var words = content.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var currentChunk = new StringBuilder();
+        var currentTitle = titleHierarchy.LastOrDefault() ?? "Content";
+
+        foreach (var word in words)
+        {
+            // Check if adding this word would exceed the limit
+            var wouldExceedLimit = currentChunk.Length + word.Length + 1 > _options.MaxChunkSize;
+            
+            if (wouldExceedLimit && currentChunk.Length > 0)
+            {
+                // Create chunk with current content
+                var chunkContent = currentChunk.ToString().Trim();
+                if (!string.IsNullOrEmpty(chunkContent))
+                {
+                    chunks.Add(new SemanticChunk
+                    {
+                        Content = chunkContent,
+                        Title = currentTitle,
+                        TitleLevel = 0,
+                        TitleHierarchy = new List<string>(titleHierarchy)
+                    });
+                }
+
+                // Start new chunk
+                currentChunk.Clear();
+            }
+
+            // Add word to current chunk
+            if (currentChunk.Length > 0)
+            {
+                currentChunk.Append(" ");
+            }
+            currentChunk.Append(word);
+        }
+
+        // Add final chunk if it has content
+        if (currentChunk.Length > 0)
+        {
+            var chunkContent = currentChunk.ToString().Trim();
+            if (!string.IsNullOrEmpty(chunkContent))
+            {
+                chunks.Add(new SemanticChunk
+                {
+                    Content = chunkContent,
+                    Title = currentTitle,
+                    TitleLevel = 0,
+                    TitleHierarchy = new List<string>(titleHierarchy)
+                });
+            }
         }
 
         return chunks;
@@ -428,64 +621,7 @@ public sealed class SemanticChunking : IPipelineStepHandler
     /// <returns>List of paragraph-based chunks.</returns>
     private List<SemanticChunk> ChunkByParagraphs(string text, List<string> titleHierarchy)
     {
-        var chunks = new List<SemanticChunk>();
-        var paragraphs = text.Split(new[] { "\n\n", "\r\n\r\n" }, StringSplitOptions.RemoveEmptyEntries);
-        
-        var currentChunk = new StringBuilder();
-        var currentTitle = titleHierarchy.LastOrDefault() ?? "Content";
-
-        foreach (var paragraph in paragraphs)
-        {
-            var trimmedParagraph = paragraph.Trim();
-            if (string.IsNullOrEmpty(trimmedParagraph)) continue;
-
-            // Check if adding this paragraph would exceed the limit
-            if (currentChunk.Length + trimmedParagraph.Length + 2 > _options.MaxChunkSize && currentChunk.Length > 0)
-            {
-                // Create chunk with current content
-                var content = currentChunk.ToString().Trim();
-                if (content.Length >= _options.MinChunkSize)
-                {
-                    chunks.Add(new SemanticChunk
-                    {
-                        Content = content,
-                        Title = currentTitle,
-                        TitleLevel = 0, // No specific level for paragraph chunks
-                        TitleHierarchy = new List<string>(titleHierarchy)
-                    });
-                }
-
-                // Start new chunk
-                currentChunk.Clear();
-                currentChunk.AppendLine(trimmedParagraph);
-            }
-            else
-            {
-                if (currentChunk.Length > 0)
-                {
-                    currentChunk.AppendLine();
-                }
-                currentChunk.AppendLine(trimmedParagraph);
-            }
-        }
-
-        // Add final chunk if it has content
-        if (currentChunk.Length > 0)
-        {
-            var content = currentChunk.ToString().Trim();
-            if (content.Length >= _options.MinChunkSize)
-            {
-                chunks.Add(new SemanticChunk
-                {
-                    Content = content,
-                    Title = currentTitle,
-                    TitleLevel = 0,
-                    TitleHierarchy = new List<string>(titleHierarchy)
-                });
-            }
-        }
-
-        return chunks;
+        return SplitContentIntoChunks(text, titleHierarchy);
     }
 
     /// <summary>
@@ -496,29 +632,34 @@ public sealed class SemanticChunking : IPipelineStepHandler
     /// <param name="titleHierarchy">Current title hierarchy.</param>
     private void AppendOrCreateChunk(List<SemanticChunk> chunks, string content, List<string> titleHierarchy)
     {
+        var trimmedContent = content.Trim();
+        if (string.IsNullOrEmpty(trimmedContent))
+        {
+            return;
+        }
+
         if (!chunks.Any())
         {
-            chunks.Add(new SemanticChunk
+            // Create first chunk
+            var newChunks = SplitContentIntoChunks(trimmedContent, titleHierarchy);
+            if (newChunks.Any())
             {
-                Content = content.Trim(),
-                Title = titleHierarchy.LastOrDefault() ?? "Content",
-                TitleLevel = 0,
-                TitleHierarchy = new List<string>(titleHierarchy)
-            });
+                chunks.AddRange(newChunks);
+            }
             return;
         }
 
         var lastChunk = chunks.Last();
         
         // Check if we can append to the last chunk
-        if (lastChunk.Content.Length + content.Length + 2 <= _options.MaxChunkSize)
+        if (lastChunk.Content.Length + trimmedContent.Length + 2 <= _options.MaxChunkSize)
         {
-            lastChunk.Content += "\n\n" + content.Trim();
+            lastChunk.Content += "\n\n" + trimmedContent;
         }
         else
         {
-            // Create new chunk
-            var newChunks = ChunkByParagraphs(content, titleHierarchy);
+            // Create new chunks for the content
+            var newChunks = SplitContentIntoChunks(trimmedContent, titleHierarchy);
             chunks.AddRange(newChunks);
         }
     }
