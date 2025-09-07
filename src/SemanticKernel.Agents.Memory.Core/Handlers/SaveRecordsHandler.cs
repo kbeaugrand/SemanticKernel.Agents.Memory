@@ -34,7 +34,7 @@ public sealed class SaveRecordsHandler<TVectorStore> : IPipelineStepHandler
     public async Task<(ReturnType Result, DataPipelineResult Pipeline)> InvokeAsync(DataPipelineResult pipeline, CancellationToken ct = default)
     {
         var recordsToSave = pipeline.Files.Where(f => f.GeneratedFiles.ContainsKey("embedding.vec")).ToList();
-        
+
         _logger?.LogDebug("Starting record saving for {RecordCount} files with embeddings", recordsToSave.Count);
 
         if (recordsToSave.Count == 0)

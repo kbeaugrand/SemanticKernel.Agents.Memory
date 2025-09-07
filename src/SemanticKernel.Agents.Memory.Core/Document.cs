@@ -28,7 +28,7 @@ namespace SemanticKernel.Agents.Memory.Core
         /// The timestamp when the document was imported.
         /// </summary>
         public DateTime ImportedAt { get; set; }
-        
+
         /// <summary>
         /// Optional tags associated with the document import.
         /// </summary>

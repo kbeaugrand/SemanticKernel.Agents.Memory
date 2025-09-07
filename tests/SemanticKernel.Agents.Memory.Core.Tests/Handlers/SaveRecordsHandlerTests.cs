@@ -36,7 +36,7 @@ public class SaveRecordsHandlerTests
     public void Constructor_WithNullVectorStore_ShouldThrowArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => 
+        Assert.Throws<ArgumentNullException>(() =>
             new SaveRecordsHandler<VectorStore>(null!, _mockLogger.Object));
     }
 
@@ -82,12 +82,12 @@ public class SaveRecordsHandlerTests
         // Arrange
         var handler = new SaveRecordsHandler<VectorStore>(_mockVectorStore.Object, _mockLogger.Object);
         var pipeline = new DataPipelineResult();
-        
+
         var fileDetails = new FileDetails
         {
             Name = "test.txt"
         };
-        
+
         // Add file without embeddings (no "embedding.vec" key in GeneratedFiles)
         pipeline.Files.Add(fileDetails);
 

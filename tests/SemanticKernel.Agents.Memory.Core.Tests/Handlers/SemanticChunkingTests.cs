@@ -98,12 +98,12 @@ public class SemanticChunkingTests
         // Arrange
         var handler = new SemanticChunking();
         var pipeline = new DataPipelineResult();
-        
+
         var fileDetails = new FileDetails
         {
             Name = "test.txt"
         };
-        
+
         pipeline.Files.Add(fileDetails);
 
         // Act
@@ -121,7 +121,7 @@ public class SemanticChunkingTests
         // Arrange
         var handler = new SemanticChunking();
         var extractedText = "This is a simple text without any headings. It contains enough content to meet the minimum chunk size requirement. The text should be processed and turned into a single semantic chunk since there are no heading markers to split it into multiple parts. This ensures that the basic chunking functionality works correctly for plain text documents.";
-        
+
         var fileDetails = TestDataFactory.CreateSampleFileDetails(
             name: "test.txt",
             artifactType: ArtifactTypes.ExtractedText);
@@ -135,14 +135,14 @@ public class SemanticChunkingTests
 
         // Assert
         result.Result.Should().Be(ReturnType.Success);
-        
+
         // Should have the original file plus chunk files
         result.Pipeline.Files.Should().HaveCountGreaterThan(1);
-        
+
         // Check that chunk files were created
         var chunkFiles = result.Pipeline.Files.Where(f => f.ArtifactType == ArtifactTypes.TextPartition).ToList();
         chunkFiles.Should().HaveCount(1);
-        
+
         // Check that chunk text was stored in context
         var chunkFile = chunkFiles[0];
         var chunkTextKey = $"chunk_text_{chunkFile.Id}";
@@ -162,11 +162,11 @@ public class SemanticChunkingTests
         };
         var handler = new SemanticChunking(options);
         var pipeline = new DataPipelineResult();
-        
+
         var fileDetails = TestDataFactory.CreateSampleFileDetails(
             name: "test.md",
             artifactType: ArtifactTypes.ExtractedText);
-        
+
         var text = @"# Main Title
 This is the introduction.
 
@@ -178,7 +178,7 @@ Content of the second section.
 
 ### Subsection
 Content of the subsection.";
-        
+
         pipeline.Files.Add(fileDetails);
         pipeline.ContextArguments[$"extracted_text_{fileDetails.Id}"] = text;
 
@@ -187,7 +187,7 @@ Content of the subsection.";
 
         // Assert
         result.Result.Should().Be(ReturnType.Success);
-        
+
         // Should have the original file plus multiple chunk files
         var chunkFiles = result.Pipeline.Files.Where(f => f.ArtifactType == ArtifactTypes.TextPartition).ToList();
         chunkFiles.Should().HaveCountGreaterThan(1);
@@ -212,11 +212,11 @@ Content of the subsection.";
         };
         var handler = new SemanticChunking(options);
         var pipeline = new DataPipelineResult();
-        
+
         var fileDetails = TestDataFactory.CreateSampleFileDetails(
             name: "test.md",
             artifactType: ArtifactTypes.ExtractedText);
-        
+
         var text = @"# H1 Title
 Content after H1.
 
@@ -228,7 +228,7 @@ Content after H3.
 
 #### H4 Title
 Content after H4 - should not create new chunk.";
-        
+
         pipeline.Files.Add(fileDetails);
         pipeline.ContextArguments[$"extracted_text_{fileDetails.Id}"] = text;
 
@@ -237,7 +237,7 @@ Content after H4 - should not create new chunk.";
 
         // Assert
         result.Result.Should().Be(ReturnType.Success);
-        
+
         // Should have chunk files for H1, H2, and H3, but H4 should be included with H3's content
         var chunkFiles = result.Pipeline.Files.Where(f => f.ArtifactType == ArtifactTypes.TextPartition).ToList();
         chunkFiles.Should().HaveCount(3);
@@ -255,14 +255,14 @@ Content after H4 - should not create new chunk.";
         };
         var handler = new SemanticChunking(options);
         var pipeline = new DataPipelineResult();
-        
+
         var fileDetails = TestDataFactory.CreateSampleFileDetails(
             name: "test.md",
             artifactType: ArtifactTypes.ExtractedText);
-        
+
         var longText = @"## Section 1
 " + string.Join(" ", Enumerable.Repeat("This is a very long text that should be split into multiple chunks due to size constraints.", 10));
-        
+
         pipeline.Files.Add(fileDetails);
         pipeline.ContextArguments[$"extracted_text_{fileDetails.Id}"] = longText;
 
@@ -271,7 +271,7 @@ Content after H4 - should not create new chunk.";
 
         // Assert
         result.Result.Should().Be(ReturnType.Success);
-        
+
         var chunkFiles = result.Pipeline.Files.Where(f => f.ArtifactType == ArtifactTypes.TextPartition).ToList();
         chunkFiles.Should().HaveCountGreaterThan(1);
 
@@ -299,17 +299,17 @@ Content after H4 - should not create new chunk.";
         };
         var handler = new SemanticChunking(options);
         var pipeline = new DataPipelineResult();
-        
+
         var fileDetails = TestDataFactory.CreateSampleFileDetails(
             name: "test.md",
             artifactType: ArtifactTypes.ExtractedText);
-        
+
         var text = @"# Main Title
 Introduction content.
 
 ## Section Title
 Section content.";
-        
+
         pipeline.Files.Add(fileDetails);
         pipeline.ContextArguments[$"extracted_text_{fileDetails.Id}"] = text;
 
@@ -318,14 +318,14 @@ Section content.";
 
         // Assert
         result.Result.Should().Be(ReturnType.Success);
-        
+
         var chunkFiles = result.Pipeline.Files.Where(f => f.ArtifactType == ArtifactTypes.TextPartition).ToList();
         chunkFiles.Should().HaveCountGreaterThan(1);
 
         // With IncludeTitleContext disabled, chunks should not contain previous title context
         var secondChunkFile = chunkFiles.Skip(1).FirstOrDefault();
         secondChunkFile.Should().NotBeNull();
-        
+
         var secondChunkTextKey = $"chunk_text_{secondChunkFile!.Id}";
         result.Pipeline.ContextArguments.Should().ContainKey(secondChunkTextKey);
         var secondChunkText = result.Pipeline.ContextArguments[secondChunkTextKey] as string;
@@ -344,17 +344,17 @@ Section content.";
         };
         var handler = new SemanticChunking(options);
         var pipeline = new DataPipelineResult();
-        
+
         var fileDetails = TestDataFactory.CreateSampleFileDetails(
             name: "test.md",
             artifactType: ArtifactTypes.ExtractedText);
-        
+
         var text = @"## Section 1
 Short.
 
 ## Section 2
 This is a longer section with more content that should definitely exceed the minimum chunk size requirement.";
-        
+
         pipeline.Files.Add(fileDetails);
         pipeline.ContextArguments[$"extracted_text_{fileDetails.Id}"] = text;
 
@@ -363,7 +363,7 @@ This is a longer section with more content that should definitely exceed the min
 
         // Assert
         result.Result.Should().Be(ReturnType.Success);
-        
+
         var chunkFiles = result.Pipeline.Files.Where(f => f.ArtifactType == ArtifactTypes.TextPartition).ToList();
         chunkFiles.Should().NotBeEmpty();
 
@@ -384,14 +384,14 @@ This is a longer section with more content that should definitely exceed the min
         // Arrange
         var handler = new SemanticChunking();
         var pipeline = new DataPipelineResult();
-        
+
         var file1 = TestDataFactory.CreateSampleFileDetails(
             name: "test1.md",
             artifactType: ArtifactTypes.ExtractedText);
         var file2 = TestDataFactory.CreateSampleFileDetails(
             name: "test2.md",
             artifactType: ArtifactTypes.ExtractedText);
-        
+
         pipeline.Files.Add(file1);
         pipeline.Files.Add(file2);
         pipeline.ContextArguments[$"extracted_text_{file1.Id}"] = "## First Document\nContent of first document.";
@@ -402,10 +402,10 @@ This is a longer section with more content that should definitely exceed the min
 
         // Assert
         result.Result.Should().Be(ReturnType.Success);
-        
+
         // Should have the original files plus chunk files
         result.Pipeline.Files.Should().HaveCountGreaterThan(2);
-        
+
         var chunkFiles = result.Pipeline.Files.Where(f => f.ArtifactType == ArtifactTypes.TextPartition).ToList();
         chunkFiles.Should().HaveCountGreaterOrEqualTo(2);
 

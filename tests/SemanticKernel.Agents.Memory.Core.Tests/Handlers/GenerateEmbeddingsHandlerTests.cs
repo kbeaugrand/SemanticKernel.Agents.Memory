@@ -82,7 +82,7 @@ public class GenerateEmbeddingsHandlerTests
         // Assert
         result.Result.Should().Be(ReturnType.Success);
         result.Pipeline.Should().BeSameAs(pipeline);
-        
+
         // Verify no embeddings were generated - we can't directly verify the extension method
         // but we know no text partitions mean no calls
     }
@@ -97,8 +97,8 @@ public class GenerateEmbeddingsHandlerTests
         {
             Files = new List<FileDetails>
             {
-                new FileDetails 
-                { 
+                new FileDetails
+                {
                     Id = fileId,
                     Name = fileName,
                     ArtifactType = ArtifactTypes.TextPartition,
@@ -111,11 +111,11 @@ public class GenerateEmbeddingsHandlerTests
         // Setup the mock to return an embedding for the fallback text
         var embeddingVector = new float[] { 0.1f, 0.2f, 0.3f };
         var embedding = new Embedding<float>(embeddingVector);
-        
+
         _mockEmbeddingGenerator
             .Setup(x => x.GenerateAsync(
-                It.IsAny<IEnumerable<string>>(), 
-                It.IsAny<EmbeddingGenerationOptions>(), 
+                It.IsAny<IEnumerable<string>>(),
+                It.IsAny<EmbeddingGenerationOptions>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync([embedding]);
 
@@ -124,12 +124,12 @@ public class GenerateEmbeddingsHandlerTests
 
         // Assert
         result.Result.Should().Be(ReturnType.Success);
-        
+
         // Verify embedding was generated with fallback text
         _mockEmbeddingGenerator.Verify(
             x => x.GenerateAsync(
                 It.Is<IEnumerable<string>>(texts => texts.First() == $"Sample text content for {fileName}"),
-                It.IsAny<EmbeddingGenerationOptions>(), 
+                It.IsAny<EmbeddingGenerationOptions>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
 
@@ -150,8 +150,8 @@ public class GenerateEmbeddingsHandlerTests
         {
             Files = new List<FileDetails>
             {
-                new FileDetails 
-                { 
+                new FileDetails
+                {
                     Id = fileId,
                     Name = "chunk1.txt",
                     ArtifactType = ArtifactTypes.TextPartition,
@@ -177,7 +177,7 @@ public class GenerateEmbeddingsHandlerTests
 
         // Assert
         result.Result.Should().Be(ReturnType.Success);
-        
+
         // Verify embedding was generated
         _mockEmbeddingGenerator.Verify(
             x => x.GenerateAsync(
@@ -189,7 +189,7 @@ public class GenerateEmbeddingsHandlerTests
         // Verify embedding was stored in context
         var embeddingKey = $"embedding_{fileId}";
         result.Pipeline.ContextArguments.Should().ContainKey(embeddingKey);
-        
+
         var storedEmbedding = result.Pipeline.ContextArguments[embeddingKey] as float[];
         storedEmbedding.Should().NotBeNull();
         storedEmbedding.Should().BeEquivalentTo(embeddingVector);
@@ -210,15 +210,15 @@ public class GenerateEmbeddingsHandlerTests
         {
             Files = new List<FileDetails>
             {
-                new FileDetails 
-                { 
+                new FileDetails
+                {
                     Id = file1Id,
                     Name = "chunk1.txt",
                     ArtifactType = ArtifactTypes.TextPartition,
                     Size = text1.Length
                 },
-                new FileDetails 
-                { 
+                new FileDetails
+                {
                     Id = file2Id,
                     Name = "chunk2.txt",
                     ArtifactType = ArtifactTypes.TextPartition,
@@ -251,7 +251,7 @@ public class GenerateEmbeddingsHandlerTests
 
         // Assert
         result.Result.Should().Be(ReturnType.Success);
-        
+
         // Verify both embeddings were generated
         _mockEmbeddingGenerator.Verify(
             x => x.GenerateAsync(
@@ -276,8 +276,8 @@ public class GenerateEmbeddingsHandlerTests
         {
             Files = new List<FileDetails>
             {
-                new FileDetails 
-                { 
+                new FileDetails
+                {
                     Id = fileId,
                     Name = "chunk1.txt",
                     ArtifactType = ArtifactTypes.TextPartition,
@@ -302,7 +302,7 @@ public class GenerateEmbeddingsHandlerTests
 
         // Assert
         result.Result.Should().Be(ReturnType.TransientError);
-        
+
         // Verify error was logged
         _mockLogger.Verify(
             x => x.Log(
@@ -325,8 +325,8 @@ public class GenerateEmbeddingsHandlerTests
         {
             Files = new List<FileDetails>
             {
-                new FileDetails 
-                { 
+                new FileDetails
+                {
                     Id = "file1",
                     ArtifactType = ArtifactTypes.TextPartition
                 }
@@ -337,7 +337,7 @@ public class GenerateEmbeddingsHandlerTests
         cts.Cancel();
 
         // Act & Assert
-        await Assert.ThrowsAsync<OperationCanceledException>(() => 
+        await Assert.ThrowsAsync<OperationCanceledException>(() =>
             _handler.InvokeAsync(pipeline, cts.Token));
     }
 }

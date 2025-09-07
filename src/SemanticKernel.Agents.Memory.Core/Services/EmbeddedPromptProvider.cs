@@ -29,8 +29,8 @@ public class EmbeddedPromptProvider : IPromptProvider
         _assembly = assembly ?? Assembly.GetExecutingAssembly();
         _resourcePrefix = resourcePrefix ?? "SemanticKernel.Agents.Memory.Core.Prompts";
         _promptCache = new Dictionary<string, string>();
-        
-        _logger.LogDebug("EmbeddedPromptProvider initialized with assembly: {Assembly}, prefix: {Prefix}", 
+
+        _logger.LogDebug("EmbeddedPromptProvider initialized with assembly: {Assembly}, prefix: {Prefix}",
             _assembly.FullName, _resourcePrefix);
     }
 
@@ -57,35 +57,35 @@ public class EmbeddedPromptProvider : IPromptProvider
 
         // Construct the full resource name
         var resourceName = $"{_resourcePrefix}.{promptName}.prompt";
-        
+
         _logger.LogDebug("Attempting to load prompt resource: {ResourceName}", resourceName);
 
         // Get the embedded resource
         using var stream = _assembly.GetManifestResourceStream(resourceName);
-        
+
         if (stream == null)
         {
             // Log available resources for debugging
             var availableResources = _assembly.GetManifestResourceNames()
                 .Where(r => r.StartsWith(_resourcePrefix))
                 .ToArray();
-            
+
             _logger.LogWarning("Prompt resource '{ResourceName}' not found. Available prompt resources: {AvailableResources}",
                 resourceName, string.Join(", ", availableResources));
-            
+
             throw new FileNotFoundException($"Embedded prompt resource '{resourceName}' not found in assembly '{_assembly.FullName}'");
         }
 
         // Read the content
         using var reader = new StreamReader(stream, Encoding.UTF8);
         var content = reader.ReadToEnd();
-        
+
         // Cache the prompt for future use
         _promptCache[promptName] = content;
-        
-        _logger.LogDebug("Successfully loaded and cached prompt '{PromptName}' ({Length} characters)", 
+
+        _logger.LogDebug("Successfully loaded and cached prompt '{PromptName}' ({Length} characters)",
             promptName, content.Length);
-        
+
         return content;
     }
 
@@ -100,7 +100,7 @@ public class EmbeddedPromptProvider : IPromptProvider
             .Select(r => r.Substring(_resourcePrefix.Length + 1, r.Length - _resourcePrefix.Length - 8)) // Remove prefix and .prompt extension
             .ToList();
 
-        _logger.LogDebug("Found {Count} embedded prompts: {PromptNames}", 
+        _logger.LogDebug("Found {Count} embedded prompts: {PromptNames}",
             resourceNames.Count, string.Join(", ", resourceNames));
 
         return resourceNames;

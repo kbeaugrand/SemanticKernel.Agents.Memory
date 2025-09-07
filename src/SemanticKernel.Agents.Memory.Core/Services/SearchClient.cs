@@ -5,12 +5,12 @@ using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.AI;
+using Microsoft.Extensions.VectorData;
+using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.ChatCompletion;
 using SemanticKernel.Agents.Memory;
 using SemanticKernel.Agents.Memory.Core.Models;
-using Microsoft.Extensions.VectorData;
-using Microsoft.Extensions.AI;
-using Microsoft.SemanticKernel.ChatCompletion;
-using Microsoft.SemanticKernel;
 
 namespace SemanticKernel.Agents.Memory.Core.Services;
 
@@ -207,14 +207,14 @@ public class SearchClient<TVectorStore> : ISearchClient
         {
             if (citationCount > 0)
                 factsBuilder.Append("\n\n");
-            
+
             // Apply the fact template with available placeholders
             var factText = _options.FactTemplate
                 .Replace("{{$content}}", result.Content)
                 .Replace("{{$source}}", result.Source)
                 .Replace("{{$relevance}}", result.RelevanceScore.ToString("F3"))
                 .Replace("{{$memoryId}}", result.Id);
-            
+
             factsBuilder.Append(factText);
             citationCount++;
         }

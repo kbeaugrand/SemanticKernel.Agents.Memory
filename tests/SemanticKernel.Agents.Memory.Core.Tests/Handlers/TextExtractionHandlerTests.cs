@@ -116,13 +116,13 @@ public class TextExtractionHandlerTests
 
         // Assert
         result.Result.Should().Be(ReturnType.Success);
-        
+
         // Should have one file with extracted text
         result.Pipeline.Files.Should().HaveCount(1);
         var file = result.Pipeline.Files[0];
         file.Name.Should().Be("test.txt");
         file.ArtifactType.Should().Be(ArtifactTypes.ExtractedText);
-        
+
         // Extracted text should be stored in context
         var extractedTextKey = $"extracted_text_{file.Id}";
         result.Pipeline.ContextArguments.Should().ContainKey(extractedTextKey);
@@ -154,13 +154,13 @@ public class TextExtractionHandlerTests
 
         // Assert
         result.Result.Should().Be(ReturnType.Success);
-        
+
         // Should have one file with fallback text
         result.Pipeline.Files.Should().HaveCount(1);
         var file = result.Pipeline.Files[0];
         file.Name.Should().Be("test.txt");
         file.ArtifactType.Should().Be(ArtifactTypes.ExtractedText);
-        
+
         // Should contain fallback text in context
         var extractedTextKey = $"extracted_text_{file.Id}";
         result.Pipeline.ContextArguments.Should().ContainKey(extractedTextKey);
@@ -200,13 +200,13 @@ public class TextExtractionHandlerTests
 
         // Assert
         result.Result.Should().Be(ReturnType.Success);
-        
+
         // Should have one file with fallback text
         result.Pipeline.Files.Should().HaveCount(1);
         var file = result.Pipeline.Files[0];
         file.Name.Should().Be("test.txt");
         file.ArtifactType.Should().Be(ArtifactTypes.ExtractedText);
-        
+
         // Should contain fallback text in context
         var extractedTextKey = $"extracted_text_{file.Id}";
         result.Pipeline.ContextArguments.Should().ContainKey(extractedTextKey);
@@ -253,10 +253,10 @@ public class TextExtractionHandlerTests
         // Assert
         result.Result.Should().Be(ReturnType.Success);
         result.Pipeline.Files.Should().HaveCount(2);
-        
+
         var file1 = result.Pipeline.Files.First(f => f.Name == "file1.txt");
         var file2 = result.Pipeline.Files.First(f => f.Name == "file2.txt");
-        
+
         // Both files should have extracted text in context
         result.Pipeline.ContextArguments.Should().ContainKey($"extracted_text_{file1.Id}");
         result.Pipeline.ContextArguments.Should().ContainKey($"extracted_text_{file2.Id}");
@@ -285,7 +285,7 @@ public class TextExtractionHandlerTests
         cts.Cancel();
 
         // Act & Assert
-        await Assert.ThrowsAsync<OperationCanceledException>(() => 
+        await Assert.ThrowsAsync<OperationCanceledException>(() =>
             _handler.InvokeAsync(pipeline, cts.Token));
     }
 }
