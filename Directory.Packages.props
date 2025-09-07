@@ -1,0 +1,46 @@
+<Project>
+  <!-- Enable Central Package Management -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <!-- Centralized Package Version Management -->
+  <ItemGroup>
+    <!-- Microsoft Semantic Kernel -->
+    <PackageVersion Include="Microsoft.SemanticKernel.Abstractions" Version="1.64.0" />
+    <PackageVersion Include="Microsoft.SemanticKernel.Core" Version="1.64.0" />
+    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.AzureOpenAI" Version="1.64.0" />
+    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.InMemory" Version="1.64.0-preview" />
+
+    <!-- Microsoft Extensions -->
+    <PackageVersion Include="Microsoft.Extensions.AI" Version="9.8.0" />
+    <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="9.8.0" />
+    <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="9.8.0-preview.1.25412.6" />
+    <PackageVersion Include="Microsoft.Extensions.VectorData.Abstractions" Version="9.7.0" />
+    <PackageVersion Include="Microsoft.Extensions.Http" Version="8.0.1" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.Logging" Version="8.0.1" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.3" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="8.0.1" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="8.0.1" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.UserSecrets" Version="8.0.1" />
+    <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="8.0.0" />
+
+    <!-- Azure -->
+    <PackageVersion Include="Azure.Identity" Version="1.15.0" />
+
+    <!-- System -->
+    <PackageVersion Include="System.Text.Json" Version="8.0.5" />
+
+    <!-- Testing -->
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageVersion Include="xunit" Version="2.9.3" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <PackageVersion Include="coverlet.collector" Version="6.0.0" />
+    <PackageVersion Include="Moq" Version="4.20.72" />
+    <PackageVersion Include="FluentAssertions" Version="6.12.2" />
+  </ItemGroup>
+</Project>
