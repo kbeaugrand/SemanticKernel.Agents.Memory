@@ -24,7 +24,7 @@ public sealed class MimeTypeDetector
         { ".csv", "text/csv" },
         { ".tsv", "text/tab-separated-values" },
         { ".rtf", "application/rtf" },
-        
+
         // Code files
         { ".cs", "text/x-csharp" },
         { ".vb", "text/x-vbasic" },
@@ -46,7 +46,7 @@ public sealed class MimeTypeDetector
         { ".cfg", "text/plain" },
         { ".conf", "text/plain" },
         { ".log", "text/plain" },
-        
+
         // Microsoft Office formats
         { ".doc", "application/msword" },
         { ".docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document" },
@@ -54,15 +54,15 @@ public sealed class MimeTypeDetector
         { ".xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
         { ".ppt", "application/vnd.ms-powerpoint" },
         { ".pptx", "application/vnd.openxmlformats-officedocument.presentationml.presentation" },
-        
+
         // OpenDocument formats
         { ".odt", "application/vnd.oasis.opendocument.text" },
         { ".ods", "application/vnd.oasis.opendocument.spreadsheet" },
         { ".odp", "application/vnd.oasis.opendocument.presentation" },
-        
+
         // PDF
         { ".pdf", "application/pdf" },
-        
+
         // Images
         { ".jpg", "image/jpeg" },
         { ".jpeg", "image/jpeg" },
@@ -74,7 +74,7 @@ public sealed class MimeTypeDetector
         { ".tif", "image/tiff" },
         { ".webp", "image/webp" },
         { ".ico", "image/x-icon" },
-        
+
         // Audio
         { ".mp3", "audio/mpeg" },
         { ".wav", "audio/wav" },
@@ -82,7 +82,7 @@ public sealed class MimeTypeDetector
         { ".m4a", "audio/mp4" },
         { ".aac", "audio/aac" },
         { ".flac", "audio/flac" },
-        
+
         // Video
         { ".mp4", "video/mp4" },
         { ".avi", "video/x-msvideo" },
@@ -90,7 +90,7 @@ public sealed class MimeTypeDetector
         { ".wmv", "video/x-ms-wmv" },
         { ".mkv", "video/x-matroska" },
         { ".webm", "video/webm" },
-        
+
         // Archives
         { ".zip", "application/zip" },
         { ".rar", "application/x-rar-compressed" },
@@ -98,11 +98,11 @@ public sealed class MimeTypeDetector
         { ".tar", "application/x-tar" },
         { ".gz", "application/gzip" },
         { ".bz2", "application/x-bzip2" },
-        
+
         // eBooks
         { ".epub", "application/epub+zip" },
         { ".mobi", "application/x-mobipocket-ebook" },
-        
+
         // Other common formats
         { ".exe", "application/vnd.microsoft.portable-executable" },
         { ".dll", "application/vnd.microsoft.portable-executable" },

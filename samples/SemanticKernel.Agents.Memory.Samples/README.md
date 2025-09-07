@@ -165,10 +165,10 @@ To configure Azure OpenAI embedding generation in your own project:
 services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(serviceProvider =>
 {
     var azureOpenAIClient = new AzureOpenAIClient(
-        new Uri("https://your-resource.openai.azure.com/"), 
+        new Uri("https://your-resource.openai.azure.com/"),
         new AzureKeyCredential("your-api-key")
     );
-    
+
     var embeddingClient = azureOpenAIClient.GetEmbeddingClient("text-embedding-ada-002");
     return new AzureOpenAIEmbeddingGenerator(embeddingClient, "text-embedding-ada-002");
 });

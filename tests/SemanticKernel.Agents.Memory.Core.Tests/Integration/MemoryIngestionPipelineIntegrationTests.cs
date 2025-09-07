@@ -105,7 +105,7 @@ public class MemoryIngestionPipelineIntegrationTests
         var extractedTextFiles = files.Where(f => f.ArtifactType == ArtifactTypes.ExtractedText).ToList();
         extractedTextFiles.Should().HaveCountGreaterThan(0);
 
-        // Verify chunked files exist  
+        // Verify chunked files exist
         var chunkFiles = files.Where(f => f.ArtifactType == ArtifactTypes.TextPartition).ToList();
         chunkFiles.Should().HaveCountGreaterThan(0);
 

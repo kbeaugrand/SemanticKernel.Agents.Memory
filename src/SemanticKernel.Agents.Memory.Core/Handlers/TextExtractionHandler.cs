@@ -133,7 +133,7 @@ public sealed class TextExtractionHandler : IPipelineStepHandler
             // For binary files, return basic metadata
             return $"""
                 # {upload.FileName}
-                
+
                 **File Type:** {upload.MimeType ?? "Unknown"}
                 **File Size:** {upload.Bytes.Length:N0} bytes
                 **Note:** Binary content could not be extracted. Consider using MarkitDown service for better extraction.
@@ -143,7 +143,7 @@ public sealed class TextExtractionHandler : IPipelineStepHandler
         {
             return $"""
                 # {upload.FileName}
-                
+
                 **File Type:** {upload.MimeType ?? "Unknown"}
                 **File Size:** {upload.Bytes.Length:N0} bytes
                 **Note:** Content extraction failed. Raw binary content detected.
