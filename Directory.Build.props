@@ -1,2 +1,13 @@
 <Project>
+  
+  <!-- Disable package signing globally -->
+  <PropertyGroup>
+    <SignAssembly>false</SignAssembly>
+    <DelaySign>false</DelaySign>
+    <PublicSign>false</PublicSign>
+    <!-- Ensure no certificate files are used -->
+    <AssemblyOriginatorKeyFile></AssemblyOriginatorKeyFile>
+    <PackageCertificateKeyFile></PackageCertificateKeyFile>
+  </PropertyGroup>
+  
 </Project>
