@@ -1,0 +1,42 @@
+# This workflow will build a .NET project
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-net
+
+name: Create Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  Publish:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        package:
+        - SemanticKernel.Agents.Memory.Abstractions
+        - SemanticKernel.Agents.Memory.Core
+        # - SemanticKernel.Agents.Memory.MCP
+        # - SemanticKernel.Agents.Memory.Plugin
+        # - SemanticKernel.Agents.Memory.Service
+
+    steps:
+    - uses: actions/checkout@v5
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: 8.x
+    - name: Restore dependencies
+      run: dotnet restore
+      working-directory: ./
+    - name: Build
+      run: dotnet build --no-restore --configuration Release
+      working-directory: ./
+    - name: Pack
+      run: dotnet pack --configuration Release /p:Version=${{ github.event.release.tag_name }}
+      working-directory: ./
+    - name: Push to NuGet
+      env:
+        NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+      run: |
+        dotnet nuget push **/${{ matrix.package }}.*.nupkg --source nuget.org --api-key $NUGET_API_KEY --skip-duplicate
+      working-directory: ./

@@ -1,0 +1,135 @@
+# Dependabot configuration file
+# See: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+
+version: 2
+updates:
+  # Enable version updates for .NET NuGet packages
+  - package-ecosystem: "nuget"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 5
+    assignees:
+      - "kbeaugrand"
+    labels:
+      - "dependencies"
+      - "nuget"
+      - "automated"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    rebase-strategy: "auto"
+    # Group updates to reduce PR noise
+    groups:
+      microsoft-extensions:
+        patterns:
+          - "Microsoft.Extensions.*"
+        update-types:
+          - "minor"
+          - "patch"
+      semantic-kernel:
+        patterns:
+          - "Microsoft.SemanticKernel*"
+        update-types:
+          - "minor"
+          - "patch"
+      testing-packages:
+        patterns:
+          - "Microsoft.NET.Test.Sdk"
+          - "xunit*"
+          - "Moq*"
+          - "FluentAssertions*"
+        update-types:
+          - "minor"
+          - "patch"
+      ai-packages:
+        patterns:
+          - "Microsoft.Extensions.AI*"
+          - "Microsoft.Extensions.VectorData*"
+        update-types:
+          - "minor"
+          - "patch"
+    # Allow patch and minor updates, but require manual review for major updates
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  # Enable version updates for GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "10:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 3
+    assignees:
+      - "kbeaugrand"
+    labels:
+      - "dependencies"
+      - "github-actions"
+      - "automated"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    rebase-strategy: "auto"
+    # Group GitHub Actions updates
+    groups:
+      github-actions:
+        patterns:
+          - "actions/*"
+          - "github/*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Enable version updates for Docker (if using Docker in the future)
+  - package-ecosystem: "docker"
+    directory: "/services/markitdown-service"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "11:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 2
+    assignees:
+      - "kbeaugrand"
+    labels:
+      - "dependencies"
+      - "docker"
+      - "automated"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    rebase-strategy: "auto"
+
+  # Enable version updates for Python packages (for MarkitDown service)
+  - package-ecosystem: "pip"
+    directory: "/services/markitdown-service"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "12:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 3
+    assignees:
+      - "kbeaugrand"
+    labels:
+      - "dependencies"
+      - "python"
+      - "automated"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    rebase-strategy: "auto"
+    # Group Python package updates
+    groups:
+      python-packages:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
