@@ -23,6 +23,35 @@ This repository contains an advanced **Memory Pipeline** designed to enhance the
 - Scalable design to accommodate multi-agent systems and complex workflows
 - Easy integration with Semantic Kernel SDK and extensible architecture for custom memory logic
 
+## Installation
+
+The NuGet packages are available from GitHub Packages. To install them, you need to configure your NuGet client to use GitHub Packages as a source.
+
+### Configure NuGet Source
+
+First, add the GitHub Packages source to your NuGet configuration:
+
+```bash
+dotnet nuget add source https://nuget.pkg.github.com/kbeaugrand/index.json --name sk-agents-memory
+```
+
+### Install Packages
+
+Then install the packages you need:
+
+```bash
+# Core memory pipeline functionality
+dotnet add package SemanticKernel.Agents.Memory.Core --source sk-agents-memory
+```
+
+Alternatively, you can add the packages directly to your `.csproj` file:
+
+```xml
+<PackageReference Include="SemanticKernel.Agents.Memory.Core" Version="0.0.1-beta08" />
+<PackageReference Include="SemanticKernel.Agents.Memory.Abstractions" Version="0.0.1-beta08" />
+```
+
+
 ## Getting Started
 
 ### Demo setup

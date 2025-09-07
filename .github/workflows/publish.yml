@@ -10,6 +10,9 @@ on:
 jobs:
   Publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     strategy:
       matrix:
         package:
@@ -47,9 +50,7 @@ jobs:
       run: dotnet pack --no-build --configuration Release /p:Version=${{ github.event.release.tag_name }} /p:PackageVersion=${{ github.event.release.tag_name }}
       working-directory: ./
 
-    - name: Push to NuGet
+    - name: Push to GitHub Packages
       run: |
-        dotnet nuget push **/${{ matrix.package }}.*.nupkg --source nuget.org --api-key $NUGET_API_KEY --skip-duplicate
+        dotnet nuget push **/${{ matrix.package }}.*.nupkg --source https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json --api-key ${{ github.token }} --skip-duplicate
       working-directory: ./
-      env:
-        NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}

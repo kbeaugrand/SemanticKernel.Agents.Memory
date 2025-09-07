@@ -1,5 +1,5 @@
 <Project>
-  
+
   <!-- Disable package signing globally -->
   <PropertyGroup>
     <SignAssembly>false</SignAssembly>
@@ -9,5 +9,5 @@
     <AssemblyOriginatorKeyFile></AssemblyOriginatorKeyFile>
     <PackageCertificateKeyFile></PackageCertificateKeyFile>
   </PropertyGroup>
-  
+
 </Project>
