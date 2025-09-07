@@ -35,13 +35,13 @@ using SemanticKernel.Agents.Memory;
 public class CustomSearchClient : ISearchClient
 {
     public async Task<SearchResult[]> SearchAsync(
-        string index, 
-        string query, 
+        string index,
+        string query,
         CancellationToken cancellationToken = default)
     {
         // Your custom search implementation
     }
-    
+
     // ... other interface members
 }
 ```

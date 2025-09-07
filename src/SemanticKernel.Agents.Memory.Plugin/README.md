@@ -105,7 +105,7 @@ public class MemoryEnabledAgent
     {
         _kernel = kernel;
         _searchClient = searchClient;
-        
+
         // Import memory plugin
         _kernel.ImportPluginFromObject(new MemoryPlugin(_searchClient), "Memory");
     }
@@ -114,16 +114,16 @@ public class MemoryEnabledAgent
     {
         var prompt = """
             User Query: {{$query}}
-            
+
             First, search memory for relevant information:
             {{Memory.SearchMemory query=$query}}
-            
+
             Then provide a comprehensive response based on the memory results and your knowledge.
             """;
 
-        var result = await _kernel.InvokePromptAsync(prompt, 
+        var result = await _kernel.InvokePromptAsync(prompt,
             new KernelArguments { ["query"] = userQuery });
-            
+
         return result.ToString();
     }
 }
