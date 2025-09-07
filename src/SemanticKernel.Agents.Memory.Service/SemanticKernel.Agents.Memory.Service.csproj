@@ -13,6 +13,7 @@
     <Description>Service for SemanticKernel Agents Memory.</Description>
     <PackageTags>semantic-kernel;agents;memory;service</PackageTags>
     <RepositoryUrl>https://github.com/kbeaugrand/SemanticKernel.Agents.Memory</RepositoryUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
 
   </PropertyGroup>
 
@@ -22,5 +23,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SemanticKernel.Agents.Memory.Abstractions\SemanticKernel.Agents.Memory.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 </Project>

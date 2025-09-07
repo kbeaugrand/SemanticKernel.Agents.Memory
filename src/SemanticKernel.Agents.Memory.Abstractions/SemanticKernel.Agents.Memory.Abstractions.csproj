@@ -14,10 +14,15 @@
     <Description>Abstractions for SemanticKernel Agents Memory.</Description>
     <PackageTags>semantic-kernel;agents;memory;abstractions</PackageTags>
     <RepositoryUrl>https://github.com/kbeaugrand/SemanticKernel.Agents.Memory</RepositoryUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.SemanticKernel.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 </Project>
