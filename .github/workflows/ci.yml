@@ -137,6 +137,9 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore SemanticKernel.Agents.Memory.sln
 
+    - name: Build solution
+      run: dotnet build SemanticKernel.Agents.Memory.sln --configuration Release
+
     - name: Build and pack
       run: dotnet pack SemanticKernel.Agents.Memory.sln --configuration Release --output ./nupkgs
 
