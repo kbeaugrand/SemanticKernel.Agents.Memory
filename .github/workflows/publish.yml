@@ -26,28 +26,6 @@ jobs:
       with:
         dotnet-version: 8.x
 
-    # - name: Setup package signing
-    #   run: |
-    #     if [ ! -z "$PACKAGE_SIGNING_CERTIFICATE" ]; then
-    #       echo "Creating certificate from secret..."
-    #       echo "$PACKAGE_SIGNING_CERTIFICATE" | base64 --decode > PackageSigning.pfx
-    #       echo "Certificate created for signing"
-    #     else
-    #       echo "⚠️  No signing certificate found"
-    #     fi
-
-    #     if [ ! -z "$STRONGNAME_KEY" ]; then
-    #       echo "Creating strong name key from secret..."
-    #       echo "$STRONGNAME_KEY" | base64 --decode > StrongName.snk
-    #       echo "Strong name key created"
-    #     else
-    #       echo "⚠️  No strong name key found - generating temporary key"
-    #       ./scripts/generate-signing-certificate.sh
-    #     fi
-    #   env:
-    #     PACKAGE_SIGNING_CERTIFICATE: ${{ secrets.PACKAGE_SIGNING_CERT_BASE64 }}
-    #     STRONGNAME_KEY: ${{ secrets.STRONGNAME_KEY_BASE64 }}
-
     - name: Restore dependencies
       run: dotnet restore
       working-directory: ./
@@ -64,25 +42,10 @@ jobs:
     - name: Build
       run: dotnet build --no-restore --configuration Release /p:Version=${{ github.event.release.tag_name }} /p:PackageVersion=${{ github.event.release.tag_name }} /p:AssemblyVersion=${{ steps.extract_version.outputs.numeric_version }} /p:FileVersion=${{ steps.extract_version.outputs.numeric_version }}
       working-directory: ./
-      env:
-        PackageCertificatePassword: ${{ secrets.PACKAGE_SIGNING_CERT_PASSWORD }}
 
     - name: Pack
-      run: |
-        # # Temporarily move certificate to prevent automatic signing during pack
-        # if [ -f "PackageSigning.pfx" ]; then
-        #   mv PackageSigning.pfx PackageSigning.pfx.temp
-        # fi
-
-        dotnet pack --no-build --configuration Release /p:Version=${{ github.event.release.tag_name }} /p:PackageVersion=${{ github.event.release.tag_name }} /p:SignPackage=false /p:PackageCertificateKeyFile=""
-
-        # # Restore certificate for manual signing
-        # if [ -f "PackageSigning.pfx.temp" ]; then
-        #   mv PackageSigning.pfx.temp PackageSigning.pfx
-        # fi
+      run: dotnet pack --no-build --configuration Release /p:Version=${{ github.event.release.tag_name }} /p:PackageVersion=${{ github.event.release.tag_name }}
       working-directory: ./
-      env:
-        PackageCertificatePassword: ${{ secrets.PACKAGE_SIGNING_CERT_PASSWORD }}
 
     - name: Push to NuGet
       run: |
@@ -90,8 +53,3 @@ jobs:
       working-directory: ./
       env:
         NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
-
-    - name: Clean up certificates
-      if: always()
-      run: |
-        rm -f PackageSigning.pfx StrongName.snk
