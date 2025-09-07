@@ -30,6 +30,23 @@ This repository contains an advanced **Memory Pipeline** designed to enhance the
 The demo code in `samples/SemanticKernel.Agents.Memory.Samples/PipelineDemo.cs` registers configuration and composes the pipeline using the fluent API. The example below shows how to configure the pipeline:
 
 ```csharp
+services.AddAzureOpenAITextEmbeddingGeneration(
+    deploymentName: "NAME_OF_YOUR_DEPLOYMENT", // Name of deployment, e.g. "text-embedding-ada-002".
+    endpoint: "YOUR_AZURE_ENDPOINT",           // Name of Azure OpenAI service endpoint, e.g. https://myaiservice.openai.azure.com.
+    apiKey: "YOUR_API_KEY",
+    modelId: "MODEL_ID",          // Optional name of the underlying model if the deployment name doesn't match the model name, e.g. text-embedding-ada-002.
+    serviceId: "YOUR_SERVICE_ID", // Optional; for targeting specific services within Semantic Kernel.
+    dimensions: 1536              // Optional number of dimensions to generate embeddings with.
+);
+
+services.AddAzureOpenAIChatCompletion(
+    deploymentName: "NAME_OF_YOUR_DEPLOYMENT",
+    apiKey: "YOUR_API_KEY",
+    endpoint: "YOUR_AZURE_ENDPOINT",
+    modelId: "gpt-4", // Optional name of the underlying model if the deployment name doesn't match the model name
+    serviceId: "YOUR_SERVICE_ID" // Optional; for targeting specific services within Semantic Kernel
+);
+
 var memoryStore = new InMemoryVectorStore(); // or your vector store implementation
 
 // Configure the memory ingestion pipeline using the fluent API
@@ -60,7 +77,6 @@ services.AddMemorySearchClient(vectorStore, new SearchClientOptions
     Temperature = 0.7,           // LLM creativity (0.0 = deterministic, 1.0 = creative)
     MinRelevance = 0.6          // Minimum relevance score for results
 });
-
 ...
 
 // Get the orchestrator from the service provider
