@@ -158,7 +158,29 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddMemorySearchClient<TVectorStore>(this IServiceCollection services)
         where TVectorStore : Microsoft.Extensions.VectorData.VectorStore
     {
-        services.AddScoped<SearchClient<TVectorStore>>();
+        return AddMemorySearchClient<TVectorStore>(services, null);
+    }
+
+    /// <summary>
+    /// Adds memory search client with a specific vector store type and options
+    /// </summary>
+    /// <typeparam name="TVectorStore">The type of vector store</typeparam>
+    /// <param name="services">Service collection</param>
+    /// <param name="options">Search client options</param>
+    /// <returns>Service collection for chaining</returns>
+    public static IServiceCollection AddMemorySearchClient<TVectorStore>(this IServiceCollection services, SearchClientOptions? options)
+        where TVectorStore : Microsoft.Extensions.VectorData.VectorStore
+    {
+        services.AddScoped<SearchClient<TVectorStore>>(provider =>
+        {
+            var vectorStore = provider.GetRequiredService<TVectorStore>();
+            var embeddingGenerator = provider.GetRequiredService<Microsoft.Extensions.AI.IEmbeddingGenerator<string, Microsoft.Extensions.AI.Embedding<float>>>();
+            var promptProvider = provider.GetRequiredService<IPromptProvider>();
+            var chatCompletionService = provider.GetRequiredService<Microsoft.SemanticKernel.ChatCompletion.IChatCompletionService>();
+            
+            return new SearchClient<TVectorStore>(vectorStore, embeddingGenerator, promptProvider, chatCompletionService, options);
+        });
+        
         services.AddScoped<SemanticKernel.Agents.Memory.ISearchClient>(provider =>
             provider.GetRequiredService<SearchClient<TVectorStore>>());
 

@@ -25,15 +25,19 @@ public class SearchClient<TVectorStore> : ISearchClient
 
     private readonly IPromptProvider _promptProvider;
 
+    private readonly SearchClientOptions _options;
+
     public SearchClient(TVectorStore vectorStore,
                         IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator,
                         IPromptProvider promptProvider,
-                        IChatCompletionService chatCompletionService)
+                        IChatCompletionService chatCompletionService,
+                        SearchClientOptions? options = null)
     {
         _vectorStore = vectorStore;
         _embeddingGenerator = embeddingGenerator ?? throw new ArgumentNullException(nameof(embeddingGenerator));
         _promptProvider = promptProvider ?? throw new ArgumentNullException(nameof(promptProvider));
         _chatCompletionService = chatCompletionService ?? throw new ArgumentNullException(nameof(chatCompletionService));
+        _options = options ?? new SearchClientOptions();
     }
 
     public async Task<SearchResult> SearchAsync(
@@ -62,8 +66,8 @@ public class SearchClient<TVectorStore> : ISearchClient
 
             await collection.EnsureCollectionExistsAsync(cancellationToken).ConfigureAwait(false);
 
-            // Determine the search limit - use provided limit or default to 10
-            var searchLimit = limit > 0 ? limit : 10;
+            // Determine the search limit - use provided limit, or default to MaxMatchesCount from options
+            var searchLimit = limit > 0 ? limit : _options.MaxMatchesCount;
 
             var searchResult = collection.SearchAsync(embedding, top: searchLimit, new VectorSearchOptions<MemoryRecord>
             {
@@ -165,7 +169,7 @@ public class SearchClient<TVectorStore> : ISearchClient
 
         try
         {
-            searchResult = await SearchAsync(index, question, filters, minRelevance, 5, cancellationToken).ConfigureAwait(false);
+            searchResult = await SearchAsync(index, question, filters, minRelevance, _options.MaxMatchesCount, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -190,20 +194,28 @@ public class SearchClient<TVectorStore> : ISearchClient
             {
                 Question = question,
                 HasResult = false,
-                Result = "No relevant information found.",
+                Result = _options.EmptyAnswer,
                 RelevantSources = new List<SourceReference>()
             };
             yield break;
         }
 
-        // Build context from search results 
+        // Build context from search results using the fact template
         var factsBuilder = new System.Text.StringBuilder();
         var citationCount = 0;
         foreach (var result in searchResult.Results)
         {
             if (citationCount > 0)
                 factsBuilder.Append("\n\n");
-            factsBuilder.Append($"Source: {result.Source}\nContent: {result.Content}");
+            
+            // Apply the fact template with available placeholders
+            var factText = _options.FactTemplate
+                .Replace("{{$content}}", result.Content)
+                .Replace("{{$source}}", result.Source)
+                .Replace("{{$relevance}}", result.RelevanceScore.ToString("F3"))
+                .Replace("{{$memoryId}}", result.Id);
+            
+            factsBuilder.Append(factText);
             citationCount++;
         }
         var facts = factsBuilder.ToString();
@@ -225,7 +237,7 @@ public class SearchClient<TVectorStore> : ISearchClient
 
         // Get the prompt template and build the prompt
         string? prompt = null;
-        var notFoundMessage = "I don't have sufficient information to answer this question based on the available facts.";
+        var notFoundMessage = _options.EmptyAnswer;
 
         try
         {
@@ -256,6 +268,30 @@ public class SearchClient<TVectorStore> : ISearchClient
         var chatHistory = new ChatHistory();
         chatHistory.AddUserMessage(prompt!);
 
+        // Create execution settings using the options
+        var executionSettings = new PromptExecutionSettings
+        {
+            ExtensionData = new Dictionary<string, object>
+            {
+                ["temperature"] = _options.Temperature,
+                ["top_p"] = _options.TopP,
+                ["presence_penalty"] = _options.PresencePenalty,
+                ["frequency_penalty"] = _options.FrequencyPenalty
+            }
+        };
+
+        // Add stop sequences if provided
+        if (_options.StopSequences.Count > 0)
+        {
+            executionSettings.ExtensionData["stop"] = _options.StopSequences;
+        }
+
+        // Add max tokens if specified
+        if (_options.MaxAskPromptSize > 0)
+        {
+            executionSettings.ExtensionData["max_tokens"] = _options.AnswerTokens;
+        }
+
         // Track token usage and accumulate response
         var tokenUsageList = new List<TokenUsage>();
         var responseBuilder = new System.Text.StringBuilder();
@@ -265,6 +301,7 @@ public class SearchClient<TVectorStore> : ISearchClient
         // Generate response using chat completion service and stream results
         await foreach (var chunk in _chatCompletionService.GetStreamingChatMessageContentsAsync(
             chatHistory,
+            executionSettings,
             cancellationToken: cancellationToken)
             .ConfigureAwait(false))
         {
