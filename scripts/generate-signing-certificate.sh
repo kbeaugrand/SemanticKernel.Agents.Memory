@@ -52,6 +52,9 @@ echo "📋 Copying certificates to repository root..."
 cp certificates/$CERT_FILE ../
 cp certificates/$SNK_FILE ../
 
+# Save password for easy secret export
+echo "$PASSWORD" > certificates/password.txt
+
 # Get base64 encoded certificate
 echo "🔢 Encoding certificate to base64..."
 CERT_BASE64=$(base64 -w 0 certificates/$CERT_FILE)

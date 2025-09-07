@@ -25,18 +25,50 @@ jobs:
       uses: actions/setup-dotnet@v5
       with:
         dotnet-version: 8.x
+
+    - name: Setup package signing
+      run: |
+        if [ ! -z "$PACKAGE_SIGNING_CERTIFICATE" ]; then
+          echo "Creating certificate from secret..."
+          echo "$PACKAGE_SIGNING_CERTIFICATE" | base64 --decode > PackageSigning.pfx
+          echo "Certificate created for signing"
+        else
+          echo "⚠️  No signing certificate found"
+        fi
+
+        if [ ! -z "$STRONGNAME_KEY" ]; then
+          echo "Creating strong name key from secret..."
+          echo "$STRONGNAME_KEY" | base64 --decode > StrongName.snk
+          echo "Strong name key created"
+        else
+          echo "⚠️  No strong name key found - generating temporary key"
+          ./scripts/generate-signing-certificate.sh
+        fi
+      env:
+        PACKAGE_SIGNING_CERTIFICATE: ${{ secrets.PACKAGE_SIGNING_CERT_BASE64 }}
+        STRONGNAME_KEY: ${{ secrets.STRONGNAME_KEY_BASE64 }}
+
     - name: Restore dependencies
       run: dotnet restore
       working-directory: ./
     - name: Build
       run: dotnet build --no-restore --configuration Release
       working-directory: ./
+      env:
+        PackageCertificatePassword: ${{ secrets.PACKAGE_SIGNING_CERT_PASSWORD }}
     - name: Pack
       run: dotnet pack --configuration Release /p:Version=${{ github.event.release.tag_name }}
       working-directory: ./
-    - name: Push to NuGet
       env:
-        NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        PackageCertificatePassword: ${{ secrets.PACKAGE_SIGNING_CERT_PASSWORD }}
+    - name: Push to NuGet
       run: |
         dotnet nuget push **/${{ matrix.package }}.*.nupkg --source nuget.org --api-key $NUGET_API_KEY --skip-duplicate
       working-directory: ./
+      env:
+        NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+
+    - name: Clean up certificates
+      if: always()
+      run: |
+        rm -f PackageSigning.pfx StrongName.snk

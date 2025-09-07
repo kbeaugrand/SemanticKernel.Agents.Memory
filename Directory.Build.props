@@ -1,7 +1,8 @@
 <Project>
   <PropertyGroup>
     <!-- Package Signing Configuration -->
-    <SignAssembly>true</SignAssembly>
+    <SignAssembly Condition="Exists('$(MSBuildThisFileDirectory)StrongName.snk')">true</SignAssembly>
+    <SignAssembly Condition="!Exists('$(MSBuildThisFileDirectory)StrongName.snk')">false</SignAssembly>
     <DelaySign>false</DelaySign>
 
     <!-- Certificate configuration - will be overridden in CI/CD -->
