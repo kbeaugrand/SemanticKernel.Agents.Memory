@@ -1,0 +1,51 @@
+<Project>
+  <PropertyGroup>
+    <!-- Package Signing Configuration -->
+    <SignAssembly>true</SignAssembly>
+    <DelaySign>false</DelaySign>
+
+    <!-- Certificate configuration - will be overridden in CI/CD -->
+    <PackageCertificateKeyFile Condition="'$(PackageCertificateKeyFile)' == ''">$(MSBuildThisFileDirectory)PackageSigning.pfx</PackageCertificateKeyFile>
+    <PackageCertificatePassword Condition="'$(PackageCertificatePassword)' == ''"></PackageCertificatePassword>
+
+    <!-- Strong name signing -->
+    <AssemblyOriginatorKeyFile Condition="'$(AssemblyOriginatorKeyFile)' == ''">$(MSBuildThisFileDirectory)StrongName.snk</AssemblyOriginatorKeyFile>
+
+    <!-- Only sign packages if certificate exists -->
+    <SignPackage Condition="Exists('$(PackageCertificateKeyFile)')">true</SignPackage>
+    <SignPackage Condition="!Exists('$(PackageCertificateKeyFile)')">false</SignPackage>
+
+    <!-- Package signing properties -->
+    <PackageCertificateThumbprint Condition="'$(PackageCertificateThumbprint)' != ''">$(PackageCertificateThumbprint)</PackageCertificateThumbprint>
+    <PackageCertificateStore Condition="'$(PackageCertificateStore)' != ''">$(PackageCertificateStore)</PackageCertificateStore>
+
+    <!-- Timestamping -->
+    <PackageTimestampUrl>http://timestamp.digicert.com</PackageTimestampUrl>
+  </PropertyGroup>
+
+  <!-- Package signing targets -->
+  <Target Name="SignPackages" AfterTargets="Pack" Condition="'$(SignPackage)' == 'true' AND '$(PackageCertificateKeyFile)' != '' AND Exists('$(PackageCertificateKeyFile)')">
+    <ItemGroup>
+      <PackagesToSign Include="$(PackageOutputPath)*.nupkg" />
+    </ItemGroup>
+
+    <Message Text="Signing packages with certificate: $(PackageCertificateKeyFile)" Importance="high" />
+
+    <Exec Command="dotnet nuget sign &quot;%(PackagesToSign.Identity)&quot; --certificate-path &quot;$(PackageCertificateKeyFile)&quot; --certificate-password &quot;$(PackageCertificatePassword)&quot; --timestamper &quot;$(PackageTimestampUrl)&quot;"
+          Condition="'$(PackageCertificatePassword)' != ''" />
+
+    <Exec Command="dotnet nuget sign &quot;%(PackagesToSign.Identity)&quot; --certificate-path &quot;$(PackageCertificateKeyFile)&quot; --timestamper &quot;$(PackageTimestampUrl)&quot;"
+          Condition="'$(PackageCertificatePassword)' == ''" />
+  </Target>
+
+  <!-- Sign packages using certificate thumbprint (for CI/CD with installed certificates) -->
+  <Target Name="SignPackagesWithThumbprint" AfterTargets="Pack" Condition="'$(SignPackage)' == 'true' AND '$(PackageCertificateThumbprint)' != ''">
+    <ItemGroup>
+      <PackagesToSign Include="$(PackageOutputPath)*.nupkg" />
+    </ItemGroup>
+
+    <Message Text="Signing packages with certificate thumbprint: $(PackageCertificateThumbprint)" Importance="high" />
+
+    <Exec Command="dotnet nuget sign &quot;%(PackagesToSign.Identity)&quot; --certificate-fingerprint &quot;$(PackageCertificateThumbprint)&quot; --certificate-store-name &quot;$(PackageCertificateStore)&quot; --certificate-store-location CurrentUser --timestamper &quot;$(PackageTimestampUrl)&quot;" />
+  </Target>
+</Project>
