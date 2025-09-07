@@ -147,11 +147,19 @@ jobs:
           echo "$PACKAGE_SIGNING_CERTIFICATE" | base64 --decode > PackageSigning.pfx
           echo "Certificate created for signing"
         else
-          echo "No signing certificate found in secrets, generating self-signed certificate for testing..."
-          ./scripts/generate-certificates.sh
+          echo "No signing certificate found in secrets"
+        fi
+
+        if [ ! -z "$STRONGNAME_KEY" ]; then
+          echo "Creating strong name key from secret..."
+          echo "$STRONGNAME_KEY" | base64 --decode > StrongName.snk
+          echo "Strong name key created"
+        else
+          echo "No strong name key found in secrets."
         fi
       env:
-        PACKAGE_SIGNING_CERTIFICATE: ${{ secrets.PACKAGE_SIGNING_CERTIFICATE }}
+        PACKAGE_SIGNING_CERTIFICATE: ${{ secrets.PACKAGE_SIGNING_CERT_BASE64 }}
+        STRONGNAME_KEY: ${{ secrets.STRONGNAME_KEY_BASE64 }}
 
     - name: Build and pack with signing
       run: dotnet pack SemanticKernel.Agents.Memory.sln --configuration Release --output ./nupkgs
