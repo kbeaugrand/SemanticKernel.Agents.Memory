@@ -242,7 +242,7 @@ public class MemoryMcpClient
 services.AddMcpServer(options =>
 {
     options.ServerName = "memory-server";
-    
+
     // Add custom tools
     options.Tools.Add(new McpTool
     {
