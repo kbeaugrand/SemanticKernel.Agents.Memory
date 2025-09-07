@@ -149,7 +149,7 @@ public sealed class ImportOrchestrator : BaseOrchestrator
                     _logger?.LogWarning(ex, "Pipeline step '{StepName}' threw exception for document {DocumentId}, retrying (attempt {Attempt}/{MaxRetries})", 
                         stepName, pipeline.DocumentId, attempt, maxRetriesPerStep);
                     
-                    await Task.Delay(TimeSpan.FromMilliseconds(200 * attempt), ct).ConfigureAwait(false);
+                    await Task.Delay(TimeSpan.FromMilliseconds(200 * (double)attempt), ct).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
