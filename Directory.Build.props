@@ -26,27 +26,50 @@
 
   <!-- Package signing targets -->
   <Target Name="SignPackages" AfterTargets="Pack" Condition="'$(SignPackage)' == 'true' AND '$(PackageCertificateKeyFile)' != '' AND Exists('$(PackageCertificateKeyFile)')">
+    <PropertyGroup>
+      <!-- Fallback to OutputPath if PackageOutputPath is not set -->
+      <PackageSearchPath Condition="'$(PackageOutputPath)' != ''">$(PackageOutputPath)</PackageSearchPath>
+      <PackageSearchPath Condition="'$(PackageOutputPath)' == ''">$(OutputPath)</PackageSearchPath>
+    </PropertyGroup>
+    
     <ItemGroup>
-      <PackagesToSign Include="$(PackageOutputPath)*.nupkg" />
+      <PackagesToSign Include="$(PackageSearchPath)*.nupkg" />
     </ItemGroup>
 
     <Message Text="Signing packages with certificate: $(PackageCertificateKeyFile)" Importance="high" />
+    <Message Text="Package search path: $(PackageSearchPath)" Importance="high" />
+    <Message Text="Packages found: @(PackagesToSign)" Importance="high" />
 
+    <!-- Only execute signing if packages are found -->
     <Exec Command="dotnet nuget sign &quot;%(PackagesToSign.Identity)&quot; --certificate-path &quot;$(PackageCertificateKeyFile)&quot; --certificate-password &quot;$(PackageCertificatePassword)&quot; --timestamper &quot;$(PackageTimestampUrl)&quot;"
-          Condition="'$(PackageCertificatePassword)' != ''" />
+          Condition="'$(PackageCertificatePassword)' != '' AND '@(PackagesToSign)' != ''" />
 
     <Exec Command="dotnet nuget sign &quot;%(PackagesToSign.Identity)&quot; --certificate-path &quot;$(PackageCertificateKeyFile)&quot; --timestamper &quot;$(PackageTimestampUrl)&quot;"
-          Condition="'$(PackageCertificatePassword)' == ''" />
+          Condition="'$(PackageCertificatePassword)' == '' AND '@(PackagesToSign)' != ''" />
+
+    <Warning Text="No packages found to sign in: $(PackageSearchPath)" Condition="'@(PackagesToSign)' == ''" />
   </Target>
 
   <!-- Sign packages using certificate thumbprint (for CI/CD with installed certificates) -->
   <Target Name="SignPackagesWithThumbprint" AfterTargets="Pack" Condition="'$(SignPackage)' == 'true' AND '$(PackageCertificateThumbprint)' != ''">
+    <PropertyGroup>
+      <!-- Fallback to OutputPath if PackageOutputPath is not set -->
+      <PackageSearchPath Condition="'$(PackageOutputPath)' != ''">$(PackageOutputPath)</PackageSearchPath>
+      <PackageSearchPath Condition="'$(PackageOutputPath)' == ''">$(OutputPath)</PackageSearchPath>
+    </PropertyGroup>
+    
     <ItemGroup>
-      <PackagesToSign Include="$(PackageOutputPath)*.nupkg" />
+      <PackagesToSign Include="$(PackageSearchPath)*.nupkg" />
     </ItemGroup>
 
     <Message Text="Signing packages with certificate thumbprint: $(PackageCertificateThumbprint)" Importance="high" />
+    <Message Text="Package search path: $(PackageSearchPath)" Importance="high" />
+    <Message Text="Packages found: @(PackagesToSign)" Importance="high" />
 
-    <Exec Command="dotnet nuget sign &quot;%(PackagesToSign.Identity)&quot; --certificate-fingerprint &quot;$(PackageCertificateThumbprint)&quot; --certificate-store-name &quot;$(PackageCertificateStore)&quot; --certificate-store-location CurrentUser --timestamper &quot;$(PackageTimestampUrl)&quot;" />
+    <!-- Only execute signing if packages are found -->
+    <Exec Command="dotnet nuget sign &quot;%(PackagesToSign.Identity)&quot; --certificate-fingerprint &quot;$(PackageCertificateThumbprint)&quot; --certificate-store-name &quot;$(PackageCertificateStore)&quot; --certificate-store-location CurrentUser --timestamper &quot;$(PackageTimestampUrl)&quot;"
+          Condition="'@(PackagesToSign)' != ''" />
+
+    <Warning Text="No packages found to sign in: $(PackageSearchPath)" Condition="'@(PackagesToSign)' == ''" />
   </Target>
 </Project>
