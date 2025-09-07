@@ -175,7 +175,7 @@ public static class CompleteFlowDemo
         const string indexName = "default"; // Default index name
         var context = new NoopContext(); // Simple context implementation
         
-        (var documentId, var logs) = await orchestrator.ProcessUploadAsync(indexName, request, context, ct);
+        (var documentId, _) = await orchestrator.ProcessUploadAsync(indexName, request, context, ct);
         
         if (!string.IsNullOrEmpty(documentId))
         {
