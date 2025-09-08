@@ -163,8 +163,6 @@ public static class RankingDemo
     /// </summary>
     private static void ConfigureEmbeddingGenerator(IServiceCollection services, IConfiguration configuration)
     {
-        var azureOpenAIOptions = configuration.GetSection(AzureOpenAIOptions.SectionName).Get<AzureOpenAIOptions>();
-
         Console.WriteLine("🧪 Using Azure OpenAI embedding generator");
 
         // Configure the Azure OpenAI embedding generator
