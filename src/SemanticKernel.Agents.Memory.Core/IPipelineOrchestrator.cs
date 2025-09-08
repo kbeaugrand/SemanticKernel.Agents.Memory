@@ -14,13 +14,11 @@ public interface IPipelineOrchestrator
     Task<string> ImportDocumentAsync(
         string index,
         DocumentUploadRequest upload,
-        IContext context,
         CancellationToken ct = default);
 
     DataPipelineResult PrepareNewDocumentUpload(
         string index,
-        DocumentUploadRequest upload,
-        IContext context);
+        DocumentUploadRequest upload);
 
     Task RunPipelineAsync(DataPipelineResult pipeline, CancellationToken ct = default);
 }
@@ -51,7 +49,7 @@ public abstract class BaseOrchestrator : IPipelineOrchestrator
     public abstract Task<bool> TryAddHandlerAsync(IPipelineStepHandler handler, CancellationToken ct = default);
     public abstract Task RunPipelineAsync(DataPipelineResult pipeline, CancellationToken ct = default);
 
-    public virtual DataPipelineResult PrepareNewDocumentUpload(string index, DocumentUploadRequest upload, IContext context)
+    public virtual DataPipelineResult PrepareNewDocumentUpload(string index, DocumentUploadRequest upload)
     {
         _logger?.LogDebug("Preparing new document upload for index '{Index}' with {FileCount} files", index, upload.Files.Count);
 
@@ -75,12 +73,12 @@ public abstract class BaseOrchestrator : IPipelineOrchestrator
         return pipeline;
     }
 
-    public virtual async Task<string> ImportDocumentAsync(string index, DocumentUploadRequest upload, IContext context, CancellationToken ct = default)
+    public virtual async Task<string> ImportDocumentAsync(string index, DocumentUploadRequest upload, CancellationToken ct = default)
     {
         _logger?.LogInformation("Starting document import for index '{Index}' with {FileCount} files", index, upload.Files.Count);
 
         var startTime = DateTimeOffset.UtcNow;
-        var pipeline = PrepareNewDocumentUpload(index, upload, context);
+        var pipeline = PrepareNewDocumentUpload(index, upload);
 
         _logger?.LogDebug("Running pipeline for document {DocumentId}", pipeline.DocumentId);
         await RunPipelineAsync(pipeline, ct).ConfigureAwait(false);

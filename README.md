@@ -99,12 +99,12 @@ services.ConfigureMemoryIngestion(options =>
         .WithSaveRecords(memoryStore);
 });
 
-services.AddMemorySearchClient(vectorStore, new SearchClientOptions
+services.AddMemorySearchClient(memoryStore, new SearchClientOptions
 {
     MaxMatchesCount = 10,        // Max search results to retrieve
     AnswerTokens = 300,          // Max tokens for AI-generated answers
     Temperature = 0.7,           // LLM creativity (0.0 = deterministic, 1.0 = creative)
-    MinRelevance = 0.6          // Minimum relevance score for results
+    MinRelevance = 0.6           // Minimum relevance score for results
 });
 ...
 
@@ -115,15 +115,13 @@ var orchestrator = serviceProvider.GetRequiredService<ImportOrchestrator>();
 ISearchClient searchClient = serviceProvider.GetRequiredService<ISearchClient>();
 
 // Create a file upload request using the fluent builder API
-var request = orchestrator.NewDocumentUpload()
-    .WithFile("path/to/document.pdf")
-    .WithTag("document-type", "technical")
-    .WithTag("priority", "high")
-    .WithContext("source", "user-upload")
-    .Build();
-
-var pipeline = orchestrator.PrepareNewDocumentUpload(index: "default", request);
-await orchestrator.RunPipelineAsync(pipeline, ct);
+_ = await orchestrator.ProcessUploadAsync(index: "default",
+    orchestrator.NewDocumentUpload()
+        .WithFile("path/to/document.pdf")
+        .WithTag("document-type", "technical")
+        .WithTag("priority", "high")
+        .WithContext("source", "user-upload")
+        .Build());
 
 var searchResult = await searchClient.SearchAsync(
     index: "default",

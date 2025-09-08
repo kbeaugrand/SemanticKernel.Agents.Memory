@@ -6,14 +6,9 @@ using System.Threading.Tasks;
 namespace SemanticKernel.Agents.Memory.Core
 {
     /// <summary>
-    /// Context interface for pipeline operations.
-    /// </summary>
-    public interface IContext { }
-
-    /// <summary>
     /// Context for import operations.
     /// </summary>
-    public class ImportContext : IContext
+    public class ImportContext
     {
         public string Index { get; set; } = string.Empty;
         public DocumentUploadRequest? UploadRequest { get; set; }

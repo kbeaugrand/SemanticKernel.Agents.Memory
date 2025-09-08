@@ -28,11 +28,6 @@ using SemanticKernel.Agents.Memory.Samples.Configuration;
 namespace SemanticKernel.Agents.Memory.Samples;
 
 /// <summary>
-/// Simple context implementation for demo purposes.
-/// </summary>
-internal sealed class NoopContext : IContext { }
-
-/// <summary>
 /// Complete flow demonstration: Ingestion → Query with SearchClient
 /// This sample shows the end-to-end process from document ingestion to querying the memory.
 /// </summary>
@@ -173,9 +168,8 @@ public static class CompleteFlowDemo
         // Start ingestion
         Console.WriteLine("⚙️  Starting document ingestion pipeline...");
         const string indexName = "default"; // Default index name
-        var context = new NoopContext(); // Simple context implementation
 
-        (var documentId, _) = await orchestrator.ProcessUploadAsync(indexName, request, context, ct);
+        (var documentId, _) = await orchestrator.ProcessUploadAsync(indexName, request, ct);
 
         if (!string.IsNullOrEmpty(documentId))
         {

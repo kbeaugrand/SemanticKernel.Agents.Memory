@@ -29,11 +29,6 @@ namespace SemanticKernel.Agents.Memory.Samples;
 public static class PipelineDemo
 {
     /// <summary>
-    /// Simple context implementation for demo purposes.
-    /// </summary>
-    private sealed class NoopContext : IContext { }
-
-    /// <summary>
     /// Runs a complete pipeline demo with configuration.
     /// </summary>
     /// <param name="configuration">The configuration instance.</param>
@@ -105,7 +100,7 @@ public static class PipelineDemo
                 }
             };
 
-            var pipeline = orchestrator.PrepareNewDocumentUpload(index: pipelineConfig.DefaultIndex, request, context: new NoopContext());
+            var pipeline = orchestrator.PrepareNewDocumentUpload(index: pipelineConfig.DefaultIndex, request);
             await orchestrator.RunPipelineAsync(pipeline, ct);
             return (pipeline.DocumentId, pipeline.Logs);
         }
@@ -210,7 +205,7 @@ Final thoughts and summary of the document content."),
                 }
             };
 
-            var pipeline = orchestrator.PrepareNewDocumentUpload(index: pipelineConfig.DefaultIndex, request, context: new NoopContext());
+            var pipeline = orchestrator.PrepareNewDocumentUpload(index: pipelineConfig.DefaultIndex, request);
             await orchestrator.RunPipelineAsync(pipeline, ct);
             return (pipeline.DocumentId, pipeline.Logs);
         }
@@ -284,13 +279,12 @@ Final thoughts and summary of the document content."),
             var orchestrator = serviceProvider.GetRequiredService<ImportOrchestrator>();
 
             // Create sample files using the fluent API
-            var (documentId, logs) = await orchestrator.ProcessUploadAsync(
+            (string documentId, System.Collections.Generic.IReadOnlyList<PipelineLogEntry> logs) = await orchestrator.ProcessUploadAsync(
                 index: pipelineConfig.DefaultIndex,
                 builder: orchestrator.NewDocumentUpload()
                     .WithFile("large-document.txt", Encoding.UTF8.GetBytes(GenerateLargeText()))
                     .WithTag("demo", "fluent-api")
                     .WithTag("size", "large"),
-                context: new NoopContext(),
                 ct);
 
             return (documentId, logs);
@@ -462,7 +456,7 @@ The conclusion ties together all the concepts discussed in the previous sections
             };
 
             // Execute the pipeline
-            var pipeline = orchestrator.PrepareNewDocumentUpload(index: pipelineConfig.DefaultIndex, request, context: new NoopContext());
+            var pipeline = orchestrator.PrepareNewDocumentUpload(index: pipelineConfig.DefaultIndex, request);
             await orchestrator.RunPipelineAsync(pipeline, ct);
             return (pipeline.DocumentId, pipeline.Logs);
         }
@@ -531,7 +525,7 @@ The conclusion ties together all the concepts discussed in the previous sections
             // Demonstrate different fluent API upload methods
 
             // Method 1: Using the fluent builder with multiple upload methods
-            var (documentId, logs) = await orchestrator.ProcessUploadAsync(
+            (string documentId, System.Collections.Generic.IReadOnlyList<PipelineLogEntry> logs) = await orchestrator.ProcessUploadAsync(
                 index: pipelineConfig.DefaultIndex,
                 builder: orchestrator.NewDocumentUpload()
                     // Add a file from byte array with automatic MIME type detection
@@ -547,7 +541,6 @@ The conclusion ties together all the concepts discussed in the previous sections
                     // Add context data
                     .WithContext("upload_reason", "demonstration")
                     .WithContext("batch_size", 3),
-                context: new NoopContext(),
                 ct);
 
             return (documentId, logs);
@@ -627,25 +620,22 @@ The conclusion ties together all the concepts discussed in the previous sections
                 var documentId1 = await orchestrator.UploadFileAsync(
                     index: pipelineConfig.DefaultIndex,
                     filePath: tempFile1,
-                    context: new NoopContext(),
                     cancellationToken: ct);
 
                 // Method 3: Multiple files upload by paths
                 var documentId2 = await orchestrator.UploadFilesAsync(
                     index: pipelineConfig.DefaultIndex,
                     filePaths: new[] { tempFile1, tempFile2 },
-                    context: new NoopContext(),
                     cancellationToken: ct);
 
                 // Method 4: Using fluent builder with file paths
-                var (documentId3, logs) = await orchestrator.ProcessUploadAsync(
+                (string documentId3, System.Collections.Generic.IReadOnlyList<PipelineLogEntry> logs) = await orchestrator.ProcessUploadAsync(
                     index: pipelineConfig.DefaultIndex,
                     builder: orchestrator.NewDocumentUpload()
                         .WithFile(tempFile1, "renamed-demo1.txt") // Upload with custom name
                         .WithFile(tempFile2) // Upload with original name
                         .WithTag("demo", "file-paths")
                         .WithTag("files", "2"),
-                    context: new NoopContext(),
                     ct);
 
                 return (documentId3, logs);
