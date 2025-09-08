@@ -9,18 +9,16 @@
 
 # SemanticKernel Memory pipeline for Agent Frameworks
 
-This repository contains an advanced **Memory Pipeline** designed to enhance the context management and information retrieval capabilities of **Semantic Kernel** agents. The pipeline integrates various memory storage and retrieval strategies to enable agents to maintain, update, and utilize long-term and short-term memory effectively across interactions.
+This repository contains an advanced **Memory Pipeline** designed to enhance the context management and information retrieval capabilities of **Semantic Kernel** agents. The pipeline integrates various memory storage and retrieval strategies to enable agents to maintain, update, memory effectively across interactions.
 
 ## Features
 
 - **Advanced Text Chunking**: Supports both simple size-based chunking and intelligent semantic chunking based on document structure
 - **Semantic Chunking**: Creates meaningful chunks by detecting document headings and structure (Markdown, underlined, numbered headings)
 - **Dependency Injection**: Full integration with Microsoft.Extensions.DependencyInjection for easy configuration and testing
-- **Fluent Configuration API**: Intuitive configuration syntax with `services.ConfigureMemoryIngestion(options => {...})`
+- **Fluent Configuration API**: Intuitive configuration syntax
 - Modular memory components supporting vector stores, databases, and custom memory handlers
 - Efficient embedding and semantic search integration for context-aware retrieval
-- Support for both short-term conversation memory and long-term knowledge persistence
-- Scalable design to accommodate multi-agent systems and complex workflows
 - Easy integration with Semantic Kernel SDK and extensible architecture for custom memory logic
 
 ## Installation
