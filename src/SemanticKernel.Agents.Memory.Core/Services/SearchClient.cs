@@ -11,6 +11,7 @@ using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using SemanticKernel.Agents.Memory;
 using SemanticKernel.Agents.Memory.Core.Models;
+using SemanticKernel.Rankers.Abstractions;
 
 namespace SemanticKernel.Agents.Memory.Core.Services;
 
@@ -27,17 +28,21 @@ public class SearchClient<TVectorStore> : ISearchClient
 
     private readonly SearchClientOptions _options;
 
+    private readonly IRanker? _ranker;
+
     public SearchClient(TVectorStore vectorStore,
                         IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator,
                         IPromptProvider promptProvider,
                         IChatCompletionService chatCompletionService,
-                        SearchClientOptions? options = null)
+                        SearchClientOptions? options = null,
+                        IRanker? ranker = null)
     {
         _vectorStore = vectorStore;
         _embeddingGenerator = embeddingGenerator ?? throw new ArgumentNullException(nameof(embeddingGenerator));
         _promptProvider = promptProvider ?? throw new ArgumentNullException(nameof(promptProvider));
         _chatCompletionService = chatCompletionService ?? throw new ArgumentNullException(nameof(chatCompletionService));
         _options = options ?? new SearchClientOptions();
+        _ranker = ranker;
     }
 
     public async Task<SearchResult> SearchAsync(
@@ -48,8 +53,8 @@ public class SearchClient<TVectorStore> : ISearchClient
         int limit = -1,
         CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(index);
-        ArgumentException.ThrowIfNullOrWhiteSpace(query);
+        ArgumentNullException.ThrowIfNullOrWhiteSpace(index);
+        ArgumentNullException.ThrowIfNullOrWhiteSpace(query);
 
         try
         {
@@ -62,7 +67,7 @@ public class SearchClient<TVectorStore> : ISearchClient
                 return new SearchResult { Query = query, Results = new List<Citation>() };
             }
 
-            var collection = _vectorStore.GetCollection<string, MemoryRecord>(index, GetMemoryRecordStoreDefinition(embedding.Dimensions));
+            var collection = _vectorStore.GetCollection<string, MemoryRecord>(index, MemoryRecordStoreDefinitionProvider.GetMemoryRecordStoreDefinition(embedding.Dimensions));
 
             await collection.EnsureCollectionExistsAsync(cancellationToken).ConfigureAwait(false);
 
@@ -74,28 +79,25 @@ public class SearchClient<TVectorStore> : ISearchClient
                 Filter = MapFiltersToVectorStoreFilter(filters)
             });
 
+            IAsyncEnumerable<(VectorSearchResult<MemoryRecord> Result, double Score)> rankedResults =
+                MapSearchResultsToRankedResultsAsync(query, searchResult);
+
             var citations = new List<Citation>();
 
             // Process search results and convert to Citations
-            await foreach (var result in searchResult.WithCancellation(cancellationToken).ConfigureAwait(false))
+            await foreach ((var result, double rankedScore) in rankedResults.WithCancellation(cancellationToken).ConfigureAwait(false))
             {
-                // Apply relevance filter
-                var score = result.Score ?? 0.0;
-                if (score < minRelevance)
-                {
-                    continue;
-                }
-
                 var citation = new Citation
                 {
                     Id = result.Record.Id,
                     Content = result.Record.Text,
                     Source = !string.IsNullOrEmpty(result.Record.FileName) ? result.Record.FileName : result.Record.DocumentId,
-                    RelevanceScore = score
+                    RelevanceScore = result.Score ?? rankedScore
                 };
 
                 citations.Add(citation);
             }
+
 
             return new SearchResult
             {
@@ -419,27 +421,6 @@ public class SearchClient<TVectorStore> : ISearchClient
         }
     }
 
-    private static VectorStoreCollectionDefinition GetMemoryRecordStoreDefinition(int dimensions = 1536)
-    {
-        return new VectorStoreCollectionDefinition
-        {
-            Properties = new List<VectorStoreProperty>
-            {
-                new VectorStoreKeyProperty(nameof(MemoryRecord.Id), typeof(string)),
-                new VectorStoreDataProperty(nameof(MemoryRecord.DocumentId), typeof(string)) { IsIndexed = true },
-                new VectorStoreDataProperty(nameof(MemoryRecord.ExecutionId), typeof(string)) { IsIndexed = true },
-                new VectorStoreDataProperty(nameof(MemoryRecord.Index), typeof(string)) { IsIndexed = true },
-                new VectorStoreDataProperty(nameof(MemoryRecord.FileName), typeof(string)) { IsIndexed = true },
-                new VectorStoreDataProperty(nameof(MemoryRecord.Text), typeof(string)) { IsFullTextIndexed = true },
-                new VectorStoreDataProperty(nameof(MemoryRecord.ArtifactType), typeof(string)) { IsIndexed = true },
-                new VectorStoreDataProperty(nameof(MemoryRecord.PartitionNumber), typeof(int)),
-                new VectorStoreDataProperty(nameof(MemoryRecord.SectionNumber), typeof(int)),
-                new VectorStoreDataProperty(nameof(MemoryRecord.Tags), typeof(Dictionary<string, string>)) { IsIndexed = true },
-                new VectorStoreVectorProperty(nameof(MemoryRecord.Embedding), typeof(ReadOnlyMemory<float>), dimensions: dimensions)
-            }
-        };
-    }
-
     /// <summary>
     /// Maps memory filters to vector store filters.
     /// This is a basic implementation that can be extended for more complex filtering scenarios.
@@ -525,5 +506,39 @@ public class SearchClient<TVectorStore> : ISearchClient
         return combinedExpression == null
             ? null
             : Expression.Lambda<Func<MemoryRecord, bool>>(combinedExpression, parameter);
+    }
+
+    /// <summary>
+    /// Maps search results to ranked results format for streaming processing.
+    /// This helper function converts the vector search results to the expected format
+    /// used by the ranking system, preserving the original scores.
+    /// </summary>
+    /// <param name="query">The original search query</param>
+    /// <param name="searchResults">The search results from the vector store</param>
+    /// <returns>An async enumerable of ranked results with preserved scores</returns>
+    private async IAsyncEnumerable<(VectorSearchResult<MemoryRecord> Result, double Score)> MapSearchResultsToRankedResultsAsync(
+        string query,
+        IAsyncEnumerable<VectorSearchResult<MemoryRecord>> searchResults)
+    {
+        if (_ranker is not null)
+        {
+            await foreach ((VectorSearchResult<MemoryRecord> result, double score) in _ranker.RankAsync(
+                query,
+                searchResults,
+                r => r.Text,
+                _options.MaxMatchesCount).ConfigureAwait(false))
+            {
+                yield return (result, score);
+            }
+
+            yield break;
+        }
+
+        await foreach (var result in searchResults.ConfigureAwait(false))
+        {
+            // Use the original search score, defaulting to 0.0 if not available
+            var score = result.Score ?? 0.0;
+            yield return (result, score);
+        }
     }
 }

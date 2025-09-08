@@ -55,7 +55,7 @@ public sealed class SaveRecordsHandler<TVectorStore> : IPipelineStepHandler
             }
 
             var collection = _vectorStore.GetCollection<string, MemoryRecord>(collectionName,
-                                                                    GetMemoryRecordStoreDefinition(dimensions));
+                                                                    MemoryRecordStoreDefinitionProvider.GetMemoryRecordStoreDefinition(dimensions));
 
             await collection.EnsureCollectionExistsAsync(ct);
 
@@ -165,26 +165,5 @@ public sealed class SaveRecordsHandler<TVectorStore> : IPipelineStepHandler
         }
 
         return true;
-    }
-
-    private static VectorStoreCollectionDefinition GetMemoryRecordStoreDefinition(int dimensions)
-    {
-        return new VectorStoreCollectionDefinition
-        {
-            Properties = new List<VectorStoreProperty>
-            {
-                new VectorStoreKeyProperty(nameof(MemoryRecord.Id), typeof(string)),
-                new VectorStoreDataProperty(nameof(MemoryRecord.DocumentId), typeof(string)) { IsIndexed = true },
-                new VectorStoreDataProperty(nameof(MemoryRecord.ExecutionId), typeof(string)) { IsIndexed = true },
-                new VectorStoreDataProperty(nameof(MemoryRecord.Index), typeof(string)) { IsIndexed = true },
-                new VectorStoreDataProperty(nameof(MemoryRecord.FileName), typeof(string)) { IsIndexed = true },
-                new VectorStoreDataProperty(nameof(MemoryRecord.Text), typeof(string)) { IsFullTextIndexed = true },
-                new VectorStoreDataProperty(nameof(MemoryRecord.ArtifactType), typeof(string)) { IsIndexed = true },
-                new VectorStoreDataProperty(nameof(MemoryRecord.PartitionNumber), typeof(int)),
-                new VectorStoreDataProperty(nameof(MemoryRecord.SectionNumber), typeof(int)),
-                new VectorStoreDataProperty(nameof(MemoryRecord.Tags), typeof(Dictionary<string, string>)) { IsIndexed = true },
-                new VectorStoreVectorProperty(nameof(MemoryRecord.Embedding), typeof(ReadOnlyMemory<float>), dimensions: dimensions)
-            }
-        };
     }
 }
