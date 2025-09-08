@@ -10,8 +10,8 @@ using Microsoft.Extensions.VectorData;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using SemanticKernel.Agents.Memory;
-using SemanticKernel.Rankers.Abstractions;
 using SemanticKernel.Agents.Memory.Core.Models;
+using SemanticKernel.Rankers.Abstractions;
 
 namespace SemanticKernel.Agents.Memory.Core.Services;
 
