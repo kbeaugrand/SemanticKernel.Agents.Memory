@@ -223,7 +223,6 @@ public static class RankingDemo
     /// </summary>
     private static void ConfigureChatCompletionService(IServiceCollection services, IConfiguration configuration)
     {
-
         Console.WriteLine("🧪 Using Azure OpenAI chat completion service");
 
         // Configure the Azure OpenAI chat completion service
@@ -496,7 +495,14 @@ quantum machine learning, and enhanced human-AI collaboration.
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Error processing query: {ex.Message}\n");
+                // Rethrow critical exceptions that should not be caught
+                if (ex is OutOfMemoryException ||
+                    ex is StackOverflowException ||
+                    ex is ThreadAbortException)
+                {
+                    throw;
+                }
+                Console.WriteLine($"❌ Unexpected error processing query: {ex.Message}\n");
             }
         }
 
