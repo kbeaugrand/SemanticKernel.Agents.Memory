@@ -519,16 +519,3 @@ public class SearchClientTests
     }
 }
 
-/// <summary>
-/// Extension methods for testing support
-/// </summary>
-public static class TestExtensions
-{
-    public static async IAsyncEnumerable<T> ToAsyncEnumerable<T>(this IEnumerable<T> source)
-    {
-        foreach (var item in source)
-        {
-            yield return item;
-        }
-    }
-}
