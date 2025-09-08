@@ -50,7 +50,7 @@ jobs:
       run: dotnet pack --no-build --configuration Release /p:Version=${{ github.event.release.tag_name }} /p:PackageVersion=${{ github.event.release.tag_name }}
       working-directory: ./
 
-    - name: Push to GitHub Packages
+    - name: Push to NuGet.org
       run: |
-        dotnet nuget push **/${{ matrix.package }}.*.nupkg --source https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json --api-key ${{ github.token }} --skip-duplicate
+        dotnet nuget push **/${{ matrix.package }}.*.nupkg --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }} --skip-duplicate
       working-directory: ./
