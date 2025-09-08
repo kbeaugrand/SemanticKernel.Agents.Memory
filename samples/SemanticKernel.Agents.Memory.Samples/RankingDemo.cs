@@ -80,13 +80,25 @@ public static class RankingDemo
             await InteractiveSearchSession(serviceProvider, ct);
 
         }
-        catch (Exception ex)
+        catch (InvalidOperationException ex)
         {
-            Console.WriteLine($"❌ Error during ranking demo: {ex.Message}");
+            Console.WriteLine($"❌ Invalid operation during ranking demo: {ex.Message}");
             if (ex.InnerException != null)
             {
                 Console.WriteLine($"   Inner exception: {ex.InnerException.Message}");
             }
+        }
+        catch (IOException ex)
+        {
+            Console.WriteLine($"❌ IO error during ranking demo: {ex.Message}");
+            if (ex.InnerException != null)
+            {
+                Console.WriteLine($"   Inner exception: {ex.InnerException.Message}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Unexpected error during ranking demo: {ex}");
         }
     }
 
