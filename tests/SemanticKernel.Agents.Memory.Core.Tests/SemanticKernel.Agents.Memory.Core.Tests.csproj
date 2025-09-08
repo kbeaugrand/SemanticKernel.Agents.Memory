@@ -31,6 +31,7 @@
     <PackageReference Include="SemanticKernel.Rankers.BM25" />
     <PackageReference Include="Microsoft.SemanticKernel" />
     <PackageReference Include="Microsoft.SemanticKernel.Connectors.InMemory" />
+    <PackageReference Include="NuGet.CommandLine" />
   </ItemGroup>
 
   <ItemGroup>
