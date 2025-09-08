@@ -79,9 +79,8 @@ public class SearchClient<TVectorStore> : ISearchClient
                 Filter = MapFiltersToVectorStoreFilter(filters)
             });
 
-            IAsyncEnumerable<(VectorSearchResult<MemoryRecord> Result, double Score)> rankedResults = null!;
-
-            rankedResults = MapSearchResultsToRankedResultsAsync(query, searchResult);
+            IAsyncEnumerable<(VectorSearchResult<MemoryRecord> Result, double Score)> rankedResults =
+                MapSearchResultsToRankedResultsAsync(query, searchResult);
 
             var citations = new List<Citation>();
 
