@@ -98,6 +98,13 @@ public static class RankingDemo
         }
         catch (Exception ex)
         {
+            // Rethrow critical exceptions that should not be caught
+            if (ex is OutOfMemoryException ||
+                ex is StackOverflowException ||
+                ex is ThreadAbortException)
+            {
+                throw;
+            }
             Console.WriteLine($"❌ Unexpected error during ranking demo: {ex}");
         }
     }
