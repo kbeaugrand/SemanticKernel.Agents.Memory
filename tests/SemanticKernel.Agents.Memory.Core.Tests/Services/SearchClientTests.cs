@@ -487,11 +487,11 @@ public class SearchClientTests
     private async IAsyncEnumerable<(VectorSearchResult<MemoryRecord>, double)> RankWithMachineLearningScoring(string q, IAsyncEnumerable<VectorSearchResult<MemoryRecord>> results, Expression<Func<MemoryRecord, string>> textExtractor, int topN)
     {
         var allResults = new List<(VectorSearchResult<MemoryRecord>, double)>();
-        var textExpresion = textExtractor.Compile();
+        var textExpression = textExtractor.Compile();
 
         await foreach (var result in results)
         {
-            var text = textExpresion(result.Record);
+            var text = textExpression(result.Record);
             var score = text.ToLower().Contains("machine learning") ? 0.9 : 0.5;
             allResults.Add((result, score));
         }
