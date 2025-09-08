@@ -377,7 +377,7 @@ public class SearchClientTests
         var query = "test query";
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() => _searchClient.SearchAsync(null, query));
+        await Assert.ThrowsAsync<ArgumentNullException>(() => _searchClient.SearchAsync(null!, query));
     }
 
     [Theory]

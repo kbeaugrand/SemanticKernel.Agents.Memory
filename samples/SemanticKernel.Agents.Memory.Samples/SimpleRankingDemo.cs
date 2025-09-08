@@ -52,7 +52,7 @@ public static class SimpleRankingDemo
             // Step 4: Interactive Query Analysis
             Console.WriteLine("🔍 Step 4: Interactive Query Analysis");
             Console.WriteLine("────────────────────────────────────");
-            await InteractiveQueryAnalysis(ct);
+            InteractiveQueryAnalysis(ct);
 
         }
         catch (Exception ex)
@@ -136,7 +136,7 @@ public static class SimpleRankingDemo
     /// <summary>
     /// Interactive session for analyzing different query types
     /// </summary>
-    private static async Task InteractiveQueryAnalysis(CancellationToken ct)
+    private static void InteractiveQueryAnalysis(CancellationToken ct)
     {
         Console.WriteLine("🎮 Interactive Query Analysis");
         Console.WriteLine("Enter queries to see how BM25 would analyze them.");
