@@ -26,11 +26,6 @@ using SemanticKernel.Rankers.BM25;
 namespace SemanticKernel.Agents.Memory.Samples;
 
 /// <summary>
-/// Simple context implementation for demo purposes.
-/// </summary>
-internal sealed class NoopRankingContext : IContext { }
-
-/// <summary>
 /// Ranking demonstration: Shows how to use BM25 rankers with the SearchClient
 /// to improve search result quality through sophisticated ranking algorithms.
 /// </summary>
@@ -323,9 +318,8 @@ quantum machine learning, and enhanced human-AI collaboration.
             // Start ingestion
             Console.WriteLine("⚙️  Starting document ingestion pipeline...");
             const string indexName = "default"; // Default index name
-            var context = new NoopRankingContext(); // Simple context implementation
 
-            (var documentId, _) = await orchestrator.ProcessUploadAsync(indexName, request, context, ct);
+            (var documentId, _) = await orchestrator.ProcessUploadAsync(indexName, request, ct);
 
             if (!string.IsNullOrEmpty(documentId))
             {

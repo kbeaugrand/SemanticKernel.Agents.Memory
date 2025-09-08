@@ -187,7 +187,7 @@ public sealed class ImportOrchestrator : BaseOrchestrator
 
         try
         {
-            var documentId = await ImportDocumentAsync(context.Index, context.UploadRequest, context);
+            var documentId = await ImportDocumentAsync(context.Index, context.UploadRequest);
             return !string.IsNullOrEmpty(documentId);
         }
         catch

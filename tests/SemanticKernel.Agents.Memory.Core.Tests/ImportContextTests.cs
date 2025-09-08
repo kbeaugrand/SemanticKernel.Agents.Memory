@@ -206,16 +206,6 @@ public class ImportContextTests
     }
 
     [Fact]
-    public void ImportContext_ShouldImplementIContext()
-    {
-        // Act
-        var context = new ImportContext();
-
-        // Assert
-        context.Should().BeAssignableTo<IContext>();
-    }
-
-    [Fact]
     public void Properties_ShouldAllowChainedConfiguration()
     {
         // Arrange & Act

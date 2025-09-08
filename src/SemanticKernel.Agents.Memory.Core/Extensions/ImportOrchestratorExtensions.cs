@@ -27,7 +27,6 @@ public static class ImportOrchestratorExtensions
     /// <param name="orchestrator">The import orchestrator instance.</param>
     /// <param name="index">The index name to upload to.</param>
     /// <param name="filePath">The path to the file to upload.</param>
-    /// <param name="context">The context for the upload operation.</param>
     /// <param name="customFileName">Optional custom file name to use instead of the original file name.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A task that completes when the upload and processing is finished, containing the document ID.</returns>
@@ -35,7 +34,6 @@ public static class ImportOrchestratorExtensions
         this ImportOrchestrator orchestrator,
         string index,
         string filePath,
-        IContext context,
         string? customFileName = null,
         CancellationToken cancellationToken = default)
     {
@@ -43,7 +41,7 @@ public static class ImportOrchestratorExtensions
             .WithFile(filePath, customFileName)
             .Build();
 
-        return await orchestrator.ImportDocumentAsync(index, request, context, cancellationToken);
+        return await orchestrator.ImportDocumentAsync(index, request, cancellationToken);
     }
 
     /// <summary>
@@ -53,7 +51,6 @@ public static class ImportOrchestratorExtensions
     /// <param name="index">The index name to upload to.</param>
     /// <param name="fileName">The name of the file.</param>
     /// <param name="stream">The stream containing the file data.</param>
-    /// <param name="context">The context for the upload operation.</param>
     /// <param name="customMimeType">Optional custom MIME type. If not provided, it will be detected from the file extension.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A task that completes when the upload and processing is finished, containing the document ID.</returns>
@@ -62,14 +59,13 @@ public static class ImportOrchestratorExtensions
         string index,
         string fileName,
         Stream stream,
-        IContext context,
         string? customMimeType = null,
         CancellationToken cancellationToken = default)
     {
         var request = await new DocumentUploadBuilder()
             .WithFileAsync(fileName, stream, customMimeType, cancellationToken);
 
-        return await orchestrator.ImportDocumentAsync(index, request.Build(), context, cancellationToken);
+        return await orchestrator.ImportDocumentAsync(index, request.Build(), cancellationToken);
     }
 
     /// <summary>
@@ -79,7 +75,6 @@ public static class ImportOrchestratorExtensions
     /// <param name="index">The index name to upload to.</param>
     /// <param name="fileName">The name of the file.</param>
     /// <param name="bytes">The byte array containing the file data.</param>
-    /// <param name="context">The context for the upload operation.</param>
     /// <param name="customMimeType">Optional custom MIME type. If not provided, it will be detected from the file extension.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A task that completes when the upload and processing is finished, containing the document ID.</returns>
@@ -88,7 +83,6 @@ public static class ImportOrchestratorExtensions
         string index,
         string fileName,
         byte[] bytes,
-        IContext context,
         string? customMimeType = null,
         CancellationToken cancellationToken = default)
     {
@@ -96,7 +90,7 @@ public static class ImportOrchestratorExtensions
             .WithFile(fileName, bytes, customMimeType)
             .Build();
 
-        return await orchestrator.ImportDocumentAsync(index, request, context, cancellationToken);
+        return await orchestrator.ImportDocumentAsync(index, request, cancellationToken);
     }
 
     /// <summary>
@@ -105,20 +99,18 @@ public static class ImportOrchestratorExtensions
     /// <param name="orchestrator">The import orchestrator instance.</param>
     /// <param name="index">The index name to upload to.</param>
     /// <param name="filePaths">The paths to the files to upload.</param>
-    /// <param name="context">The context for the upload operation.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A task that completes when the upload and processing is finished, containing the document ID.</returns>
     public static async Task<string> UploadFilesAsync(
         this ImportOrchestrator orchestrator,
         string index,
         string[] filePaths,
-        IContext context,
         CancellationToken cancellationToken = default)
     {
         var request = await new DocumentUploadBuilder()
             .WithFilesAsync(filePaths, cancellationToken);
 
-        return await orchestrator.ImportDocumentAsync(index, request.Build(), context, cancellationToken);
+        return await orchestrator.ImportDocumentAsync(index, request.Build(), cancellationToken);
     }
 
     /// <summary>
@@ -127,18 +119,16 @@ public static class ImportOrchestratorExtensions
     /// <param name="orchestrator">The import orchestrator instance.</param>
     /// <param name="index">The index name to upload to.</param>
     /// <param name="builder">The configured document upload builder.</param>
-    /// <param name="context">The context for the upload operation.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A task that completes when the upload and processing is finished, containing the document ID and pipeline logs.</returns>
     public static async Task<(string DocumentId, System.Collections.Generic.IReadOnlyList<PipelineLogEntry> Logs)> ProcessUploadAsync(
         this ImportOrchestrator orchestrator,
         string index,
         DocumentUploadBuilder builder,
-        IContext context,
         CancellationToken cancellationToken = default)
     {
         var request = builder.Build();
-        var pipeline = orchestrator.PrepareNewDocumentUpload(index, request, context);
+        var pipeline = orchestrator.PrepareNewDocumentUpload(index, request);
         await orchestrator.RunPipelineAsync(pipeline, cancellationToken);
         return (pipeline.DocumentId, pipeline.Logs);
     }
@@ -149,18 +139,16 @@ public static class ImportOrchestratorExtensions
     /// <param name="orchestrator">The import orchestrator instance.</param>
     /// <param name="index">The index name to upload to.</param>
     /// <param name="builder">The configured document upload builder.</param>
-    /// <param name="context">The context for the upload operation.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A task that completes when the upload and processing is finished, containing the complete pipeline result.</returns>
     public static async Task<DataPipelineResult> ProcessUploadAdvancedAsync(
         this ImportOrchestrator orchestrator,
         string index,
         DocumentUploadBuilder builder,
-        IContext context,
         CancellationToken cancellationToken = default)
     {
         var request = builder.Build();
-        var pipeline = orchestrator.PrepareNewDocumentUpload(index, request, context);
+        var pipeline = orchestrator.PrepareNewDocumentUpload(index, request);
         await orchestrator.RunPipelineAsync(pipeline, cancellationToken);
         return pipeline;
     }
