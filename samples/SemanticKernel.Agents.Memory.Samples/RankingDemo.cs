@@ -223,7 +223,6 @@ public static class RankingDemo
     /// </summary>
     private static void ConfigureChatCompletionService(IServiceCollection services, IConfiguration configuration)
     {
-        var azureOpenAIOptions = configuration.GetSection(AzureOpenAIOptions.SectionName).Get<AzureOpenAIOptions>();
 
         Console.WriteLine("🧪 Using Azure OpenAI chat completion service");
 
