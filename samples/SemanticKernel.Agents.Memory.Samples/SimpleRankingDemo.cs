@@ -156,7 +156,11 @@ public static class SimpleRankingDemo
             {
                 AnalyzeQueryForBM25(query);
             }
-            catch (Exception ex)
+            catch (ArgumentException ex)
+            {
+                Console.WriteLine($"❌ Error analyzing query: {ex.Message}\n");
+            }
+            catch (FormatException ex)
             {
                 Console.WriteLine($"❌ Error analyzing query: {ex.Message}\n");
             }
