@@ -115,7 +115,7 @@ var orchestrator = serviceProvider.GetRequiredService<ImportOrchestrator>();
 ISearchClient searchClient = serviceProvider.GetRequiredService<ISearchClient>();
 
 // Create a file upload request using the fluent builder API
-_ = await orchestrator.ProcessUploadAsync(index: "default", 
+_ = await orchestrator.ProcessUploadAsync(index: "default",
     orchestrator.NewDocumentUpload()
         .WithFile("path/to/document.pdf")
         .WithTag("document-type", "technical")
