@@ -301,7 +301,7 @@ quantum machine learning, and enhanced human-AI collaboration.
 
         // Write content to a temporary file in the working directory
         var tempFileName = "ranking-demo-content.txt";
-        var tempFilePath = Path.Combine(Directory.GetCurrentDirectory(), tempFileName);
+        var tempFilePath = Path.Join(Directory.GetCurrentDirectory(), tempFileName);
         await File.WriteAllTextAsync(tempFilePath, sampleContent, ct);
 
         try
