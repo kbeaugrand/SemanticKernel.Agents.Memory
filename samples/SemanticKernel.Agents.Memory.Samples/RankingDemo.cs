@@ -195,11 +195,20 @@ public static class RankingDemo
 
                 return embeddingGenerator;
             }
-            catch (Exception ex)
+            catch (RequestFailedException ex)
             {
-                logger?.LogError(ex, "Failed to configure Azure OpenAI embedding generator. Please ensure your Azure OpenAI credentials are correct.");
-
-                throw new InvalidOperationException("Failed to configure Azure OpenAI embedding generator. See inner exception for details.", ex);
+                logger?.LogError(ex, "Failed to configure Azure OpenAI embedding generator due to an Azure Request failure. Please ensure your Azure OpenAI credentials and network connectivity are correct.");
+                throw new InvalidOperationException("Failed to configure Azure OpenAI embedding generator due to an Azure Request failure. See inner exception for details.", ex);
+            }
+            catch (ArgumentException ex)
+            {
+                logger?.LogError(ex, "Failed to configure Azure OpenAI embedding generator due to invalid arguments (e.g. Endpoint or API Key). Please check your Azure OpenAI settings.");
+                throw new InvalidOperationException("Failed to configure Azure OpenAI embedding generator due to invalid arguments. See inner exception for details.", ex);
+            }
+            catch (UriFormatException ex)
+            {
+                logger?.LogError(ex, "Failed to configure Azure OpenAI embedding generator due to an invalid URI format in the endpoint configuration.");
+                throw new InvalidOperationException("Failed to configure Azure OpenAI embedding generator due to an invalid URI format. See inner exception for details.", ex);
             }
         });
     }
