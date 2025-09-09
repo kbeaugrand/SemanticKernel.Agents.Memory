@@ -29,7 +29,7 @@ Then install the packages you need:
 
 ```bash
 # Core memory pipeline functionality
-dotnet add package SemanticKernel.Agents.Memory.Core 
+dotnet add package SemanticKernel.Agents.Memory.Core
 ```
 
 Alternatively, you can add the packages directly to your `.csproj` file:
