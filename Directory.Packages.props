@@ -14,7 +14,7 @@
     <!-- Microsoft Extensions -->
     <PackageVersion Include="Microsoft.Extensions.AI" Version="9.9.0" />
     <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="9.9.0" />
-    <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="9.8.0-preview.1.25412.6" />
+    <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="9.9.0-preview.1.25458.4" />
     <PackageVersion Include="Microsoft.Extensions.VectorData.Abstractions" Version="9.7.0" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="8.0.1" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
