@@ -8,6 +8,8 @@
     <!-- Ensure no certificate files are used -->
     <AssemblyOriginatorKeyFile></AssemblyOriginatorKeyFile>
     <PackageCertificateKeyFile></PackageCertificateKeyFile>
+    <!-- Suppress common warnings -->
+    <NoWarn>1591,618</NoWarn>
   </PropertyGroup>
 
 </Project>
