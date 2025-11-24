@@ -28,7 +28,7 @@
     <PackageVersion Include="Microsoft.Extensions.Configuration.UserSecrets" Version="8.0.1" />
     <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="8.0.0" />
     <!-- Azure -->
-    <PackageVersion Include="Azure.Identity" Version="1.17.0" />
+    <PackageVersion Include="Azure.Identity" Version="1.17.1" />
     <!-- System -->
     <PackageVersion Include="System.Text.Json" Version="8.0.5" />
     <!-- Rankers -->
