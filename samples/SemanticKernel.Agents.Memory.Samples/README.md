@@ -49,9 +49,9 @@ export AzureOpenAI__ApiKey="your-azure-openai-key"
 export AzureOpenAI__EmbeddingModel="text-embedding-ada-002"
 ```
 
-#### 3. Using appsettings.json (for development)
+#### 3. Using appsettings.json (Not recommended for sensitive data)
 
-Update the `appsettings.json` or `appsettings.Development.json` file with your actual Azure OpenAI credentials.
+You can update the `appsettings.json` file with your actual Azure OpenAI credentials, but this is not recommended for sensitive data. Use User Secrets or Environment Variables instead for secure credential management.
 
 📖 **For detailed Azure OpenAI setup instructions, see [AZURE_OPENAI_SETUP.md](AZURE_OPENAI_SETUP.md)**
 
